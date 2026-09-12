@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Aurora</title>
+  <link rel="stylesheet" href="theme/tokens.css"><link rel="stylesheet" href="styles/shell.css">
+  <script type="module" src="app/main.js"></script>
+</head>
+<body>
+  <header class="browser-chrome" aria-label="Browser controls">
+    <div class="tab-row">
+      <div class="wordmark" aria-label="Aurora"><span class="aurora-mark" aria-hidden="true"></span><span>AURORA</span></div>
+      <div id="tabs" class="tabs" role="tablist" aria-label="Open tabs"></div>
+      <div id="new-tab"></div>
+      <div id="window-drag-region" class="window-drag-region" aria-hidden="true"></div>
+      <div id="window-controls" class="window-controls" role="group" aria-label="Window controls"></div>
+    </div>
+    <nav id="navigation" class="navigation" aria-label="Navigation">
+      <form id="address-form" class="address-form" role="search">
+        <span id="address-icon"></span>
+        <input id="address" aria-label="Search or enter address" placeholder="Search or enter address" spellcheck="false" autocomplete="off" autocapitalize="off">
+        <kbd>Ctrl L</kbd>
+      </form>
+      <div id="commands"></div>
+      <div id="status" class="connection-status" role="status" hidden></div>
+    </nav>
+  </header>
+  <dialog id="palette" class="command-palette"></dialog>
+</body>
+</html>

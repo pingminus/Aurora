@@ -1,0 +1,21 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0c10; --surface: #191b23; --surface-hover: #292c38; --text: #f0f1f7;
+  --muted: #a6abba; --accent: #b5baff; --accent-ink: #16182d; --border: #ffffff20;
+  --glass: #20222dbd; --shadow: 0 8px 24px #00000020; --focus: #c6caff;
+  --blur: 18px; --radius-sm: 7px; --radius-md: 11px; --space: 4px;
+  --font: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --fast: 140ms; --slow: 300ms; --ease: cubic-bezier(.2,.8,.2,1);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); color: var(--text); background: var(--bg); }
+button, input { font: inherit; }
+button { color: inherit; cursor: pointer; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (forced-colors: active) { button, input, a { forced-color-adjust: auto; } .search, .cve-card { border: 1px solid CanvasText; } }

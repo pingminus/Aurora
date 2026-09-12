@@ -1,0 +1,15 @@
+/build/
+/out/
+**/node_modules/
+/ui/dist/
+/third_party/cef*/
+/third_party/*.json
+/third_party/*.cc
+/third_party/*.tar.bz2
+/third_party/*.zip
+*.user
+*.suo
+.vs/
+*.log
+/artifacts/
+.cache/

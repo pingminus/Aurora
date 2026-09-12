@@ -1,0 +1,55 @@
+html, body { height: 112px; overflow: hidden; }
+.tab-volume { width: 60px; min-width: 60px; height: 24px; margin: 0 7px 0 0; accent-color: var(--accent); cursor: pointer; }
+.tab-mute[aria-pressed="true"] { color: var(--accent); }
+.tab.audio-error { border-color: #df936a; }
+.browser-chrome { height: 112px; background: radial-gradient(ellipse at 12% 0%, #8f91d31c, transparent 52%), var(--bg); border-bottom: 1px solid var(--border); }
+.tab-row { height: 48px; display: flex; align-items: center; gap: 8px; padding: 6px 0 0 16px; user-select: none; }
+.wordmark { width: 138px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; font-size: 10px; font-weight: 650; letter-spacing: .23em; }
+.aurora-mark { display: block; height: 20px; width: 18px; border: 2px solid var(--accent); border-bottom: 0; transform: skew(-14deg); border-radius: 8px 8px 2px 2px; position: relative; }
+.aurora-mark::after { content: ''; position: absolute; left: 2px; right: 2px; top: 10px; border-top: 2px solid var(--accent); }
+.tabs { display: flex; align-items: center; gap: 5px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { display: flex; flex-shrink: 0; align-items: center; min-width: 280px; width: 310px; height: 36px; border: 1px solid transparent; border-radius: var(--radius-md); color: var(--muted); animation: tab-in var(--slow) var(--ease); }
+.tab.active { background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: 0 2px 5px #0000000a; }
+.tab:hover { background: var(--surface-hover); }
+.tab-select { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; background: transparent; border: 0; padding: 8px 6px 8px 12px; text-align: left; font-size: 12px; }
+.tab-select svg { width: 14px; height: 14px; color: var(--accent); }
+.tab-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-button { border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--radius-sm); color: var(--muted); transition: background var(--fast), color var(--fast); }
+.icon-button:hover { color: var(--text); background: var(--surface-hover); }
+.icon-button:active { transform: scale(.94); }
+.tab .icon-button { width: 24px; height: 24px; margin-right: 5px; flex-shrink: 0; }
+.tab .icon-button svg { width: 13px; height: 13px; }
+.window-drag-region { flex: 1 0 40px; align-self: stretch; }
+.window-controls { display: flex; align-self: stretch; flex: 0 0 auto; margin-top: -6px; }
+.window-controls .icon-button { width: 44px; height: 48px; border-radius: 0; }
+.window-controls svg { width: 15px; height: 15px; stroke-width: 1.5; }
+.window-controls .icon-button:active { transform: none; }
+.window-controls .window-close:hover { background: #c42b37; color: #fff; }
+.window-controls .window-close:active { background: #a8222d; color: #fff; }
+.window-controls .icon-button:focus-visible { outline-offset: -5px; }
+.navigation { height: 64px; display: flex; align-items: center; gap: 4px; padding: 8px 16px 12px; position: relative; }
+.address-form { margin: 0 10px; display: flex; align-items: center; gap: 11px; flex: 1; height: 40px; min-width: 0; padding: 0 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); transition: border-color var(--fast), box-shadow var(--fast); }
+.address-form:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent); }
+#address-icon { display: flex; color: var(--muted); }
+#address-icon svg { width: 15px; height: 15px; }
+#address { background: transparent; border: 0; outline: 0; width: 100%; min-width: 0; font-size: 13px; color: var(--text); }
+#address::placeholder { color: var(--muted); }
+kbd { font-family: inherit; font-size: 10px; color: var(--muted); white-space: nowrap; }
+.connection-status { position: absolute; left: 160px; right: 64px; bottom: 0; font-size: 10px; color: var(--accent); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.command-palette { position: fixed; inset: 5px 12px auto; margin: 0 auto; width: calc(100% - 24px); max-width: 1000px; height: 100px; max-height: 100px; padding: 10px 14px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.command-palette[open] { animation: palette-in var(--fast) var(--ease); }
+.command-palette::backdrop { background: #00000048; backdrop-filter: blur(5px); }
+.command-palette input { color: var(--text); background: transparent; border: 0; outline: 0; width: calc(100% - 50px); height: 30px; font-size: 14px; }
+.palette-close { float: right; color: var(--muted); background: var(--surface-hover); border: 0; border-radius: 5px; font-size: 11px; padding: 5px 8px; }
+.command-results { display: flex; align-items: center; gap: 6px; height: 43px; overflow-x: auto; scrollbar-width: thin; }
+.command-results button { flex-shrink: 0; white-space: nowrap; display: flex; align-items: center; gap: 16px; border: 1px solid var(--border); background: transparent; padding: 7px 10px; border-radius: 6px; font-size: 12px; }
+.command-results button[aria-selected="true"] { color: var(--accent-ink); background: var(--accent); }
+.command-results button[aria-selected="true"] kbd { color: inherit; }
+.command-results > span { font-size: 12px; color: var(--muted); }
+@keyframes tab-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes palette-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 700px) { .wordmark { width: 28px; } .wordmark > span:last-child { display: none; } .tab { width: 156px; } .address-form kbd { display: none; } .tab-row { padding-left: 10px; } .navigation { padding-inline: 8px; } .address-form { margin-inline: 4px; } .window-drag-region { flex-basis: 24px; } .window-controls .icon-button { width: 38px; } }
+
+@supports (backdrop-filter: blur(1px)) { .address-form, .tab.active { background: var(--glass); backdrop-filter: blur(12px); } }
+@media (prefers-reduced-transparency: reduce) { .address-form, .tab.active { background: var(--surface); backdrop-filter: none; } }

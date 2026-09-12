@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action https://duckduckgo.com">
+  <title>New tab</title>
+  <link rel="stylesheet" href="theme/tokens.css"><link rel="stylesheet" href="styles/newtab.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+  <header class="page-header"><a class="brand" href="aurora://newtab" aria-label="Aurora home">AURORA<span class="brand-dot"></span></a><span>A LITTLE SPACE TO THINK.</span></header>
+  <main>
+    <div class="hero">
+    <div class="eyebrow"><span></span> YOUR OPEN HORIZON</div>
+    <h1>Where to next<span>?</span></h1>
+    <p class="subtitle">Follow a thought. Find something wonderful.</p>
+    <form class="search" action="https://duckduckgo.com/" method="get" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
+      <input name="q" type="search" placeholder="Search the web" aria-label="Search with DuckDuckGo" required autocomplete="off">
+      <button type="submit" aria-label="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+    </form>
+    <section class="favorites" aria-label="Quick links">
+      <div class="section-label">A FEW PLACES TO START</div>
+      <div class="favorite-links">
+        <a href="https://github.com/"><span class="site-icon">G<span class="tiny-dot"></span></span><span>GitHub</span><span class="site-description">Build something</span></a>
+        <a href="https://developer.mozilla.org/"><span class="site-icon mono">M<span class="accent">_</span></span><span>MDN Web Docs</span><span class="site-description">Stay curious</span></a>
+        <a href="https://www.wikipedia.org/"><span class="site-icon serif">W</span><span>Wikipedia</span><span class="site-description">Go a little deeper</span></a>
+        <a href="https://www.are.na/"><span class="site-icon arena">▱</span><span>Are.na</span><span class="site-description">Connect ideas</span></a>
+      </div>
+    </section>
+    <a class="scroll-cue" href="#cve-feed">Explore today’s CVEs ↓</a>
+    </div>
+    <section class="cve-feed" id="cve-feed" aria-labelledby="feed-title">
+      <div class="feed-heading"><div><span class="feed-label">VULNERABILITY WATCH</span><h2 id="feed-title">Today’s CVEs</h2></div><button class="feed-button" id="feed-refresh" type="button">Refresh</button></div>
+      <p class="feed-meta" id="feed-range">Midnight through now · UTC</p>
+      <p class="feed-meta">Source: <a href="https://nvd.nist.gov/">NIST National Vulnerability Database</a> · <span id="feed-updated">Not yet refreshed</span></p>
+      <p class="feed-note">CVSS descending: highest scores first, unscored entries last. Scores prefer v4.0, then v3.1, v3.0, and v2. Different versions are not directly equivalent. Publication means first added to NVD; source coverage and scoring can lag disclosure. This product uses the NVD API but is not endorsed or certified by the NVD.</p>
+      <div id="feed-status" role="status" aria-live="polite">Loading today’s CVEs…</div>
+      <ol class="cve-list" id="feed-list" aria-label="CVEs ordered by descending CVSS"></ol>
+      <button class="feed-button" id="feed-more" type="button" hidden>Show more CVEs</button>
+      <noscript>The CVE feed requires JavaScript in Aurora’s internal starting page.</noscript>
+    </section>
+  </main>
+  <footer><span class="footer-mark">A</span><span>Made for a more considered web.</span><span class="search-provider">Search with DuckDuckGo</span></footer>
+  <script type="module" src="app/newtab.js"></script>
+</body>
+</html>

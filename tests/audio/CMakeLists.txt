@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.24)
+project(AudioSmoke LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+add_executable(audio-smoke smoke.cpp ../../src/audio/tab_audio_output.cpp)
+target_compile_definitions(audio-smoke PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(audio-smoke PRIVATE /W4 /WX /utf-8)
+target_link_libraries(audio-smoke PRIVATE xaudio2 ole32)
+
+enable_testing()
+add_test(NAME native_audio_lifecycle COMMAND audio-smoke)

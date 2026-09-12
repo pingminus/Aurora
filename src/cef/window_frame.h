@@ -1,0 +1,13 @@
+#pragma once
+#include <windows.h>
+#include <optional>
+#include <vector>
+namespace aurora {
+// Native resizing and monitor geometry remain owned by Windows.
+int frame_inset(HWND window);
+std::optional<LRESULT> handle_frame_message(HWND window,
+                                            UINT message,
+                                            WPARAM wparam,
+                                            LPARAM lparam);
+void set_drag_regions(HWND root, HWND shell, const std::vector<RECT>& regions);
+}  // namespace aurora
