@@ -53,4 +53,4 @@ Changed the feed to midnight UTC through now, with previous-day cache invalidati
 
 Implemented native shell focus plus a tab-ID-scoped presentation event on new browsing views. Terminal views are excluded. Verify packaged behavior with the plus button, Ctrl+T from web content, rapid tab creation/switching, and Open terminal; typing should enter the address on browsing tabs and the shell on terminal tabs. Clicking the starting-page search must still work.
 
-Typecheck and all 14 UI tests passed. Rebuilt core and both CTest suites passed. Native changed sources compiled, but Release linking was blocked by the running package locking aurora.dll. Packaged focus behavior has not yet been verified.
+Typecheck and all 15 UI tests passed. Rebuilt core and both CTest suites passed; the native Release package linked and launched. A plus-button new tab displayed the address caret and text in the address field without a click there. The controlled input check was interrupted by concurrent user input, so Ctrl+T from web content, rapid switching, terminal focus, and starting-page search still need dedicated packaged verification.

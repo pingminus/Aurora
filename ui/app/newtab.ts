@@ -82,3 +82,137 @@ launchTerminal.addEventListener('click', () => {
     onSuccess: () => { clearTimeout(timeout); launchTerminal.disabled = false; feedback.textContent = ''; },
     onFailure: () => { clearTimeout(timeout); launchTerminal.disabled = false; feedback.textContent = 'Terminal could not be opened.'; }});
 });
+
+const launchOmniroute = document.querySelector<HTMLButtonElement>('#open-omniroute')!;
+launchOmniroute.addEventListener('click', () => {
+  const feedback = document.querySelector<HTMLElement>('#terminal-launch-status')!;
+  if (!window.cefQuery) { feedback.textContent = 'Open this page in Aurora to start omniroute.'; return; }
+  launchOmniroute.disabled = true;
+  const timeout = window.setTimeout(() => { launchOmniroute.disabled = false; feedback.textContent = 'Omniroute launch did not respond. Check your tabs before retrying.'; }, 5000);
+  window.cefQuery({request: JSON.stringify({version: 1, command: 'launchOmniroute'}), persistent: false,
+    onSuccess: () => { clearTimeout(timeout); launchOmniroute.disabled = false; feedback.textContent = ''; },
+    onFailure: () => { clearTimeout(timeout); launchOmniroute.disabled = false; feedback.textContent = 'Omniroute could not be started.'; }});
+});
+
+interface Macro { id: number; name: string; terminalCommand: string; url: string; }
+type MacroSnapshot = { version: 1; macros: Macro[] };
+let macros: Macro[] = [];
+let editingMacroId: number | undefined;
+const dialog = document.querySelector<HTMLDialogElement>('#macro-editor')!;
+const form = document.querySelector<HTMLFormElement>('#macro-form')!;
+const nameInput = document.querySelector<HTMLInputElement>('#macro-name')!;
+const hasTerminal = document.querySelector<HTMLInputElement>('#macro-has-terminal')!;
+const terminalCmd = document.querySelector<HTMLInputElement>('#macro-terminal-command')!;
+const hasUrl = document.querySelector<HTMLInputElement>('#macro-has-url')!;
+const urlInput = document.querySelector<HTMLInputElement>('#macro-url')!;
+const contextMenu = document.querySelector<HTMLElement>('#macro-context-menu')!;
+const launchRow = document.querySelector<HTMLElement>('#launch-row')!;
+const feedback = document.querySelector<HTMLElement>('#terminal-launch-status')!;
+
+function loadMacros(): Promise<MacroSnapshot> {
+  return new Promise((resolve, reject) => {
+    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    const timeout = window.setTimeout(() => { reject(new Error('Macro state request timed out')); }, 5000);
+    window.cefQuery({request: JSON.stringify({version: 1, command: 'macroState'}), persistent: false,
+      onSuccess: (raw) => { clearTimeout(timeout); resolve(JSON.parse(raw) as MacroSnapshot); },
+      onFailure: () => { clearTimeout(timeout); reject(new Error('Failed to load macros')); }});
+  });
+}
+
+function saveMacro(name: string, terminalCommand: string, url: string, macroId?: number): Promise<MacroSnapshot> {
+  return new Promise((resolve, reject) => {
+    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    const req: any = {version: 1, command: 'saveMacro', name, terminalCommand, url};
+    if (macroId) req.macroId = macroId;
+    const timeout = window.setTimeout(() => { reject(new Error('Save macro request timed out')); }, 5000);
+    window.cefQuery({request: JSON.stringify(req), persistent: false,
+      onSuccess: (raw) => { clearTimeout(timeout); resolve(JSON.parse(raw) as MacroSnapshot); },
+      onFailure: (_code, msg) => { clearTimeout(timeout); reject(new Error(msg || 'Save macro failed')); }});
+  });
+}
+
+function deleteMacro(macroId: number): Promise<MacroSnapshot> {
+  return new Promise((resolve, reject) => {
+    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    const timeout = window.setTimeout(() => { reject(new Error('Delete macro request timed out')); }, 5000);
+    window.cefQuery({request: JSON.stringify({version: 1, command: 'deleteMacro', macroId}), persistent: false,
+      onSuccess: (raw) => { clearTimeout(timeout); resolve(JSON.parse(raw) as MacroSnapshot); },
+      onFailure: (_code, msg) => { clearTimeout(timeout); reject(new Error(msg || 'Delete macro failed')); }});
+  });
+}
+
+function launchMacro(macroId: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    const timeout = window.setTimeout(() => { reject(new Error('Launch macro request timed out')); }, 5000);
+    window.cefQuery({request: JSON.stringify({version: 1, command: 'launchMacro', macroId}), persistent: false,
+      onSuccess: () => { clearTimeout(timeout); resolve(); },
+      onFailure: (_code, msg) => { clearTimeout(timeout); reject(new Error(msg || 'Launch macro failed')); }});
+  });
+}
+
+function renderMacros(snapshot: MacroSnapshot): void {
+  macros = snapshot.macros;
+  const existing = launchRow.querySelectorAll<HTMLButtonElement>('.macro-button');
+  existing.forEach(btn => btn.remove());
+  for (const macro of macros) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'feed-button terminal-launch macro-button';
+    btn.textContent = macro.name;
+    btn.addEventListener('click', () => { void launchMacro(macro.id).catch(e => { feedback.textContent = String(e); }); });
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      contextMenu.hidden = false;
+      contextMenu.style.left = e.pageX + 'px';
+      contextMenu.style.top = e.pageY + 'px';
+      const editBtn = contextMenu.querySelector<HTMLElement>('#macro-edit')!;
+      const deleteBtn = contextMenu.querySelector<HTMLElement>('#macro-delete')!;
+      editBtn.onclick = () => { editingMacroId = macro.id; nameInput.value = macro.name; hasTerminal.checked = !!macro.terminalCommand; terminalCmd.value = macro.terminalCommand; hasUrl.checked = !!macro.url; urlInput.value = macro.url; dialog.querySelector<HTMLElement>('#macro-editor-title')!.textContent = 'Edit macro'; terminalCmd.disabled = !hasTerminal.checked; urlInput.disabled = !hasUrl.checked; dialog.showModal(); contextMenu.hidden = true; };
+      deleteBtn.onclick = () => { if (window.confirm('Delete this macro?')) { void deleteMacro(macro.id).then(renderMacros).catch(e => { feedback.textContent = String(e); }); } contextMenu.hidden = true; };
+    });
+    launchRow.insertBefore(btn, launchRow.querySelector('#add-macro-btn'));
+  }
+}
+
+hasTerminal.addEventListener('change', () => { terminalCmd.disabled = !hasTerminal.checked; if (hasTerminal.checked) terminalCmd.focus(); });
+hasUrl.addEventListener('change', () => { urlInput.disabled = !hasUrl.checked; if (hasUrl.checked) urlInput.focus(); });
+
+document.querySelector<HTMLButtonElement>('#add-macro-btn')!.addEventListener('click', () => {
+  editingMacroId = undefined;
+  nameInput.value = '';
+  hasTerminal.checked = false;
+  terminalCmd.value = '';
+  terminalCmd.disabled = true;
+  hasUrl.checked = false;
+  urlInput.value = '';
+  urlInput.disabled = true;
+  dialog.querySelector<HTMLElement>('#macro-editor-title')!.textContent = 'New macro';
+  dialog.showModal();
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = nameInput.value.trim();
+  const terminalCommand = hasTerminal.checked ? terminalCmd.value.trim() : '';
+  const url = hasUrl.checked ? urlInput.value.trim() : '';
+  if (!name) { feedback.textContent = 'Name is required'; return; }
+  if (!terminalCommand && !url) { feedback.textContent = 'Macro must have a terminal command or URL'; return; }
+  try {
+    const result = await saveMacro(name, terminalCommand, url, editingMacroId);
+    renderMacros(result);
+    dialog.close();
+    feedback.textContent = '';
+  } catch (e) {
+    feedback.textContent = String(e);
+  }
+});
+
+document.querySelector<HTMLButtonElement>('#macro-cancel')!.addEventListener('click', () => { dialog.close(); });
+dialog.querySelector<HTMLButtonElement>('.macro-editor-close')!.addEventListener('click', () => { dialog.close(); });
+
+document.addEventListener('click', (e) => {
+  if (!contextMenu.contains(e.target as Node) && e.target !== launchRow) contextMenu.hidden = true;
+});
+
+void loadMacros().then(renderMacros).catch(e => { console.error('Failed to load macros:', e); });

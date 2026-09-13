@@ -5,10 +5,16 @@
 #include <string>
 namespace aurora::terminal {
 struct Snapshot { std::string status, error, shell, bytes; uint64_t next = 0; unsigned long pid = 0; };
+// Native launch options. The initial command is trusted, internal and ASCII (a
+// known tool name); it is embedded into the shell command line before startup.
+struct Options {
+  std::string initial_command;  // Optional fixed command the shell runs on launch.
+  bool test_cmd = false;        // Launch cmd.exe instead of PowerShell.
+};
 // UI methods only lock bounded queues. Worker state outlives asynchronous close.
 class Session {
  public:
-  explicit Session(bool test_cmd = false);
+  explicit Session(const Options& options = {});
   ~Session();
   Session(const Session&) = delete;
   Session& operator=(const Session&) = delete;
@@ -21,6 +27,6 @@ class Session {
  private:
   struct State;
   std::shared_ptr<State> state_;
-  static void run(std::shared_ptr<State>, bool test_cmd);
+  static void run(std::shared_ptr<State>, const Options& options);
 };
 }

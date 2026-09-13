@@ -19,8 +19,42 @@
       <input name="q" type="search" placeholder="Search the web" aria-label="Search with DuckDuckGo" required autocomplete="off">
       <button type="submit" aria-label="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
     </form>
-    <button type="button" class="feed-button terminal-launch" id="open-terminal">⌘ Open terminal</button>
+    <div class="launch-row" id="launch-row"><button type="button" class="feed-button terminal-launch" id="open-terminal">⌘ Open terminal</button><button type="button" class="feed-button terminal-launch" id="open-omniroute">↗ Open omniroute</button><button type="button" class="feed-button add-macro-btn" id="add-macro-btn">+ Add macro</button></div>
     <p id="terminal-launch-status" role="status"></p>
+    <dialog id="macro-editor" class="macro-editor">
+      <div class="macro-editor-header">
+        <h2 id="macro-editor-title">New macro</h2>
+        <button type="button" class="macro-editor-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="macro-form" class="macro-form">
+        <div class="form-group">
+          <label for="macro-name">Name (required)</label>
+          <input type="text" id="macro-name" maxlength="40" required>
+        </div>
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="macro-has-terminal">
+            <span>Run terminal command</span>
+          </label>
+          <input type="text" id="macro-terminal-command" placeholder="e.g. omniroute" maxlength="256" disabled>
+        </div>
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="macro-has-url">
+            <span>Open site</span>
+          </label>
+          <input type="text" id="macro-url" placeholder="e.g. http://localhost:20128" maxlength="2048" disabled>
+        </div>
+        <div class="macro-form-actions">
+          <button type="submit" class="feed-button">Save</button>
+          <button type="button" class="feed-button" id="macro-cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+    <menu id="macro-context-menu" class="macro-context-menu" hidden>
+      <menuitem id="macro-edit">Edit</menuitem>
+      <menuitem id="macro-delete">Delete</menuitem>
+    </menu>
     <section class="favorites" aria-label="Quick links">
       <div class="section-label">A FEW PLACES TO START</div>
       <div class="favorite-links">

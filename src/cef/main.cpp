@@ -27,6 +27,8 @@ namespace aurora {
 namespace {
 constexpr wchar_t kWindowClass[] = L"AuroraBrowserWindow";
 constexpr char kShellUrl[] = "aurora://shell/index.html";
+constexpr char kOmnirouteUrl[] = "http://localhost:20128";
+constexpr char kOmnirouteCmd[] = "omniroute";
 class Host;
 Host* host = nullptr;  // UI-thread only; lifetime encloses the CEF message loop.
 
@@ -181,11 +183,39 @@ class Host {
     if(!it->second.session->finished() && MessageBoxW(window,L"Close this terminal and stop its shell and all child processes? Unsaved work will be lost.",L"Close terminal",MB_OKCANCEL|MB_ICONWARNING|MB_DEFBUTTON2)!=IDOK)return false;
     it->second.session->close();return true;
   }
-  void create_terminal() {
+  void create_terminal(const std::string& initial_command = "") {
     if(terminals.size()>=8){MessageBoxW(window,L"Close a terminal before opening another (maximum eight).",L"Aurora",MB_OK);return;}
     const auto id=state.create_terminal();if(!id)return;
-    terminals.emplace(id,TerminalTab{std::make_shared<terminal::Session>(),next_terminal_generation++});
+    terminal::Options options;
+    if(!initial_command.empty()){options.initial_command=initial_command;options.test_cmd=true;}
+    terminals.emplace(id,TerminalTab{std::make_shared<terminal::Session>(options),next_terminal_generation++});
     create_view(id,"aurora://terminal/");
+  }
+  void launch_omniroute() {
+    create_terminal(kOmnirouteCmd);
+    create_tab(kOmnirouteUrl);
+  }
+  void launch_macro(const Macro& macro) {
+    if (!macro.terminal_command.empty()) create_terminal(macro.terminal_command);
+    if (!macro.url.empty()) create_tab(macro.url);
+  }
+  std::string macro_snapshot() const {
+    auto result = CefDictionaryValue::Create();
+    result->SetInt("version", 1);
+    auto list = CefListValue::Create();
+    size_t index = 0;
+    for (const auto& macro : state.macros()) {
+      auto entry = CefDictionaryValue::Create();
+      entry->SetInt("id", static_cast<int>(macro.id));
+      entry->SetString("name", macro.name);
+      entry->SetString("terminalCommand", macro.terminal_command);
+      entry->SetString("url", macro.url);
+      list->SetDictionary(index++, entry);
+    }
+    result->SetList("macros", list);
+    auto value = CefValue::Create();
+    value->SetDictionary(result);
+    return CefWriteJSON(value, JSON_WRITER_DEFAULT).ToString();
   }
   CefRefPtr<CveService> cve_feed = new CveService;
   CefRefPtr<CefBrowser> shell;
@@ -302,6 +332,17 @@ class Host {
       bookmarks->SetDictionary(bookmark_index++, entry);
     }
     result->SetList("bookmarks", bookmarks);
+    auto macros = CefListValue::Create();
+    size_t macro_index = 0;
+    for (const auto& macro : state.macros()) {
+      auto entry = CefDictionaryValue::Create();
+      entry->SetInt("id", static_cast<int>(macro.id));
+      entry->SetString("name", macro.name);
+      entry->SetString("terminalCommand", macro.terminal_command);
+      entry->SetString("url", macro.url);
+      macros->SetDictionary(macro_index++, entry);
+    }
+    result->SetList("macros", macros);
     auto value = CefValue::Create();
     value->SetDictionary(result);
     return CefWriteJSON(value, JSON_WRITER_DEFAULT).ToString();
@@ -362,9 +403,13 @@ void Client::OnDraggableRegionsChanged(CefRefPtr<CefBrowser> browser,
 
 void Client::OnLoadEnd(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame> frame, int) {
   if (!frame->IsMain()) return;
+  const bool first_load = !terminal_loaded_;
   terminal_loaded_ = true;
   // Startup can create the content view before the shell document is ready.
   if (shell_) owner_.focus_new_tab_address(owner_.state.active_tab());
+  else if (first_load && !devtools_ && (frame->GetURL() == "aurora://newtab" ||
+                           frame->GetURL() == "aurora://newtab/"))
+    owner_.focus_new_tab_address(tab_);
 }
 bool Client::OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) {
   if (shell_ || devtools_ || source != FOCUS_SOURCE_NAVIGATION) return false;
@@ -644,19 +689,69 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     const auto url = frame->GetURL().ToString();
     if (devtools_ || owner_.closing || found == owner_.browsers.end() ||
         found->second->GetIdentifier() != browser->GetIdentifier() || !frame->IsMain() ||
-        (url != "aurora://newtab/" && url != "aurora://newtab") || persistent || request.length() > 256) {
+        (url != "aurora://newtab/" && url != "aurora://newtab") || persistent || request.length() > 4096) {
       callback->Failure(403, "Untrusted feed request"); return true;
     }
     auto value = CefParseJSON(request, JSON_PARSER_RFC);
     auto d = value && value->GetType() == VTYPE_DICTIONARY ? value->GetDictionary() : nullptr;
-    if (!d || d->GetSize() != 2 || d->GetType("version") != VTYPE_INT || d->GetInt("version") != 1 ||
-        d->GetType("command") != VTYPE_STRING ||
-        (d->GetString("command") != "cveState" && d->GetString("command") != "refreshCves" && d->GetString("command") != "createTerminal")) {
-      callback->Failure(400, "Invalid read-only feed command"); return true;
+    if (!d || d->GetType("version") != VTYPE_INT || d->GetInt("version") != 1 ||
+        d->GetType("command") != VTYPE_STRING) {
+      callback->Failure(400, "Invalid feed envelope"); return true;
     }
-    if(d->GetString("command")=="createTerminal"){owner_.create_terminal();owner_.layout();callback->Success("{}");return true;}
-    owner_.cve_feed->poll(d->GetString("command") == "refreshCves");
-    callback->Success(owner_.cve_feed->snapshot()); return true;
+    const auto command = d->GetString("command").ToString();
+    auto fail = [&](const char* message) { callback->Failure(400, message); return true; };
+    if (command == "cveState" || command == "refreshCves") {
+      if (d->GetSize() != 2) return fail("Invalid feed command");
+      owner_.cve_feed->poll(command == "refreshCves");
+      callback->Success(owner_.cve_feed->snapshot()); return true;
+    }
+    if (command == "createTerminal") {
+      if (d->GetSize() != 2) return fail("Invalid feed command");
+      owner_.create_terminal(); owner_.layout(); callback->Success("{}"); return true;
+    }
+    if (command == "launchOmniroute") {
+      if (d->GetSize() != 2) return fail("Invalid feed command");
+      owner_.launch_omniroute(); owner_.layout(); callback->Success("{}"); return true;
+    }
+    if (command == "macroState") {
+      if (d->GetSize() != 2) return fail("Invalid feed command");
+      callback->Success(owner_.macro_snapshot()); return true;
+    }
+    if (command == "saveMacro") {
+      if (d->GetType("name") != VTYPE_STRING || d->GetType("terminalCommand") != VTYPE_STRING || d->GetType("url") != VTYPE_STRING) return fail("Invalid macro fields");
+      const auto name = d->GetString("name").ToString();
+      const auto terminal_command = d->GetString("terminalCommand").ToString();
+      const auto macro_url = d->GetString("url").ToString();
+      if (name.empty() || name.size() > 40) return fail("Name must be 1-40 characters");
+      if (terminal_command.size() > 256) return fail("Terminal command too long");
+      for (unsigned char c : terminal_command) { if (c < 0x20 || c == '&' || c == '|' || c == '<' || c == '>' || c == ';' || c == '%' || c == '"') return fail("Terminal command contains forbidden characters"); }
+      if (!macro_url.empty()) {
+        auto target = resolve_navigation(macro_url);
+        if (!target.allowed) return fail("URL is not permitted");
+      }
+      if (terminal_command.empty() && macro_url.empty()) return fail("Macro must have a terminal command or URL");
+      if (d->HasKey("macroId")) {
+        if (d->GetType("macroId") != VTYPE_INT || d->GetInt("macroId") <= 0) return fail("Invalid macro ID");
+        if (!owner_.state.update_macro(static_cast<uint64_t>(d->GetInt("macroId")), name, terminal_command, macro_url)) return fail("Macro not found or invalid");
+      } else {
+        if (!owner_.state.add_macro(name, terminal_command, macro_url)) return fail("Could not create macro");
+      }
+      callback->Success(owner_.macro_snapshot()); return true;
+    }
+    if (command == "deleteMacro") {
+      if (d->GetType("macroId") != VTYPE_INT || d->GetInt("macroId") <= 0) return fail("Invalid macro ID");
+      if (!owner_.state.remove_macro(static_cast<uint64_t>(d->GetInt("macroId")))) return fail("Macro not found");
+      callback->Success(owner_.macro_snapshot()); return true;
+    }
+    if (command == "launchMacro") {
+      if (d->GetType("macroId") != VTYPE_INT || d->GetInt("macroId") <= 0) return fail("Invalid macro ID");
+      const auto macro_id = static_cast<uint64_t>(d->GetInt("macroId"));
+      const auto& macros = owner_.state.macros();
+      auto it = std::find_if(macros.begin(), macros.end(), [macro_id](const Macro& m) { return m.id == macro_id; });
+      if (it == macros.end()) return fail("Macro not found");
+      owner_.launch_macro(*it); owner_.layout(); callback->Success("{}"); return true;
+    }
+    callback->Failure(400, "Unknown new-tab command"); return true;
   }
   if (!shell_ || !owner_.shell || browser->GetIdentifier() != owner_.shell->GetIdentifier() ||
       !frame->IsMain() || frame->GetURL() != kShellUrl || persistent || request.length() > 16384) {

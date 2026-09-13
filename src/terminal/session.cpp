@@ -16,6 +16,14 @@ class Handle {
   void reset(HANDLE h=nullptr){if(value&&value!=INVALID_HANDLE_VALUE)CloseHandle(value);value=h;}
   Handle(const Handle&)=delete;Handle& operator=(const Handle&)=delete;
 };
+std::wstring to_wide(const std::string& text){
+  if(text.empty())return {};
+  const int size=MultiByteToWideChar(CP_UTF8,0,text.data(),static_cast<int>(text.size()),nullptr,0);
+  if(size<=0)return {};
+  std::wstring result(size,L'\0');
+  MultiByteToWideChar(CP_UTF8,0,text.data(),static_cast<int>(text.size()),result.data(),size);
+  return result;
+}
 struct Console { HPCON value=nullptr; ~Console(){if(value)ClosePseudoConsole(value);} };
 struct Attributes { std::vector<unsigned char> storage; LPPROC_THREAD_ATTRIBUTE_LIST list=nullptr;
  ~Attributes(){if(list)DeleteProcThreadAttributeList(list);} };
@@ -25,10 +33,10 @@ struct Session::State {
  int columns=100,rows=30;bool resized=false;
  std::string input,status="starting",error,shell;OutputBuffer output;DWORD pid=0;
 };
-Session::Session(bool test_cmd):state_(std::make_shared<State>()) {
+Session::Session(const Options& options):state_(std::make_shared<State>()) {
   // The supervisor owns all handles and joins its two pipe workers before exiting.
   // Its captured state has no CEF, window, browser or Session pointer.
-  std::thread([state=state_,test_cmd]{run(state,test_cmd);}).detach();
+  std::thread([state=state_,options]{run(state,options);}).detach();
 }
 Session::~Session(){close();}
 void Session::close(){std::lock_guard lock(state_->mutex);state_->stop=true;if(!state_->done)state_->status="stopping";state_->cv.notify_all();}
@@ -37,13 +45,15 @@ bool Session::finished()const{std::lock_guard lock(state_->mutex);return state_-
 bool Session::input(const std::string& bytes){std::lock_guard lock(state_->mutex);if(state_->stop||state_->status!="running"||bytes.empty()||bytes.size()>16384||bytes.size()>input_limit-state_->input.size())return false;state_->input+=bytes;state_->cv.notify_all();return true;}
 bool Session::resize(int cols,int rows){if(!valid_size(cols,rows))return false;std::lock_guard lock(state_->mutex);if(state_->stop)return false;state_->columns=cols;state_->rows=rows;state_->resized=true;return true;}
 std::optional<Snapshot> Session::read(uint64_t ack){std::lock_guard lock(state_->mutex);auto bytes=state_->output.read(ack);if(!bytes)return {};state_->cv.notify_all();return Snapshot{state_->status,state_->error,state_->shell,*bytes,state_->output.next(),state_->pid};}
-void Session::run(std::shared_ptr<State> s,bool test_cmd){
+void Session::run(std::shared_ptr<State> s,const Options& options){
  auto fail=[&](const char* message){std::lock_guard lock(s->mutex);s->error=message;s->status="error";s->done=true;s->stop=true;s->cv.notify_all();};
+ if(options.initial_command.size()>256){fail("Terminal command too long.");return;}
  Handle token; if(!OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&token.value)){fail("Cannot verify shell privileges.");return;}
  TOKEN_ELEVATION elevation{};DWORD returned=0;
  if(!GetTokenInformation(token.value,TokenElevation,&elevation,sizeof(elevation),&returned)||elevation.TokenIsElevated){fail("Terminal requires Aurora to run without administrator privileges.");return;}
  wchar_t system[MAX_PATH]{};if(!GetSystemDirectoryW(system,MAX_PATH)){fail("Cannot locate Windows shell.");return;}
- std::filesystem::path shell=std::filesystem::path(system)/(test_cmd?L"cmd.exe":L"WindowsPowerShell/v1.0/powershell.exe");
+ const bool force_cmd=options.test_cmd||!options.initial_command.empty();
+ std::filesystem::path shell=std::filesystem::path(system)/(force_cmd?L"cmd.exe":L"WindowsPowerShell/v1.0/powershell.exe");
  if(GetFileAttributesW(shell.c_str())==INVALID_FILE_ATTRIBUTES)shell=std::filesystem::path(system)/L"cmd.exe";
  const bool cmd=shell.filename()==L"cmd.exe";
  {std::lock_guard lock(s->mutex);s->shell=cmd?"Command Prompt":"Windows PowerShell";}
@@ -62,6 +72,7 @@ void Session::run(std::shared_ptr<State> s,bool test_cmd){
  // Windows supplies console handles from the pseudoconsole attribute.
  startup.StartupInfo.dwFlags=STARTF_USESTDHANDLES;
  std::wstring command=L"\""+shell.wstring()+L"\""+(cmd?L" /D /Q":L" -NoLogo -NoProfile");
+ if(!options.initial_command.empty())command+=cmd?L" /K "+to_wide(options.initial_command):L" -NoExit -Command \""+to_wide(options.initial_command)+L"\"";
  PROCESS_INFORMATION info{};
  if(!CreateProcessW(shell.c_str(),command.data(),nullptr,nullptr,FALSE,EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT,nullptr,nullptr,&startup.StartupInfo,&info)){fail("Cannot launch terminal shell.");return;}
  Handle process(info.hProcess),primary(info.hThread);

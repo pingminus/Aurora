@@ -28,6 +28,13 @@ struct Bookmark {
   std::string url;
 };
 
+struct Macro {
+  std::uint64_t id = 0;
+  std::string name;
+  std::string terminal_command;
+  std::string url;
+};
+
 // UI-thread owned state. Adapters must marshal every operation onto that thread.
 // IDs are monotonic and never recycled, including restored/duplicated tabs.
 class BrowserState {
@@ -48,6 +55,11 @@ class BrowserState {
   [[nodiscard]] std::uint64_t add_bookmark(std::uint64_t tab_id);
   bool remove_bookmark(std::uint64_t bookmark_id);
   [[nodiscard]] const std::vector<Bookmark>& bookmarks() const { return bookmarks_; }
+  // Macros are in-memory, session-lifetime (documented limitation).
+  [[nodiscard]] std::uint64_t add_macro(std::string name, std::string terminal_command, std::string url);
+  bool update_macro(std::uint64_t id, std::string name, std::string terminal_command, std::string url);
+  bool remove_macro(std::uint64_t macro_id);
+  [[nodiscard]] const std::vector<Macro>& macros() const { return macros_; }
   [[nodiscard]] std::uint64_t create_workspace(std::string name);
   bool activate_workspace(std::uint64_t id);
   bool move_to_workspace(std::uint64_t tab_id, std::uint64_t workspace_id);
@@ -64,9 +76,11 @@ class BrowserState {
   std::vector<Tab> closed_tabs_;
   std::vector<Workspace> workspaces_{{1, "Personal"}};
   std::vector<Bookmark> bookmarks_;
+  std::vector<Macro> macros_;
   std::uint64_t next_tab_id_ = 1;
   std::uint64_t next_workspace_id_ = 2;
   std::uint64_t next_bookmark_id_ = 1;
+  std::uint64_t next_macro_id_ = 1;
   std::uint64_t active_tab_ = 0;
   std::uint64_t active_workspace_ = 1;
   std::string last_error_;

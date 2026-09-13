@@ -65,5 +65,31 @@ h2 { font-size: clamp(27px, 4vw, 38px); font-weight: 400; letter-spacing: -.035e
 @media (prefers-reduced-transparency: reduce) { .search, .favorite-links a, .cve-card { background: var(--surface); backdrop-filter: none; } }
 @media (max-width: 600px) { .cve-card { padding: 18px 14px; gap: 14px; grid-template-columns: 62px minmax(0,1fr); } .cve-score { padding-right: 12px; } .feed-heading { align-items: flex-start; } }
 
-.terminal-launch { margin-top: 18px; }
+.launch-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; align-items: center; }
+.terminal-launch { margin-top: 0; }
+.add-macro-btn { margin-top: 0; font-weight: 600; }
+.macro-editor { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(500px, 90vw); max-height: 90vh; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); z-index: 1000; }
+.macro-editor::backdrop { background: rgba(0, 0, 0, 0.5); }
+.macro-editor-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border); }
+.macro-editor-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.macro-editor-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; font-size: 24px; cursor: pointer; color: var(--muted); transition: color var(--fast); }
+.macro-editor-close:hover { color: var(--text); }
+.macro-form { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 12px; font-weight: 550; color: var(--text); }
+.form-group input[type="text"] { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--background); color: var(--text); font-size: 13px; transition: border-color var(--fast); }
+.form-group input[type="text"]:focus { outline: none; border-color: var(--accent); }
+.form-group input[type="text"]:disabled { opacity: 0.5; cursor: not-allowed; }
+.checkbox-group { gap: 8px; }
+.checkbox-group label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+.checkbox-group input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.checkbox-group input[type="text"] { margin-top: 6px; }
+.macro-form-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.macro-form-actions button { flex: 1; }
+.macro-context-menu { position: fixed; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1001; padding: 4px 0; }
+.macro-context-menu[hidden] { display: none; }
+.macro-context-menu menuitem { padding: 8px 16px; cursor: pointer; font-size: 12px; color: var(--text); transition: background-color var(--fast); }
+.macro-context-menu menuitem:hover { background-color: var(--surface-hover); }
+@supports (backdrop-filter: blur(1px)) { .macro-editor { background: var(--glass); backdrop-filter: blur(14px); } }
+@media (prefers-reduced-transparency: reduce) { .macro-editor { background: var(--surface); backdrop-filter: none; } }
 #terminal-launch-status { color: var(--muted); font-size: 12px; }

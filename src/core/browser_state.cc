@@ -185,4 +185,32 @@ bool BrowserState::move_to_workspace(std::uint64_t tab_id, std::uint64_t workspa
     active_tab_ = tab_id;
   return true;
 }
+std::uint64_t BrowserState::add_macro(std::string name, std::string terminal_command, std::string url) {
+  if (name.empty() || name.size() > 40) return 0;
+  if (terminal_command.size() > 256) return 0;
+  if (url.size() > 2048) return 0;
+  const auto id = next_macro_id_++;
+  macros_.push_back({id, std::move(name), std::move(terminal_command), std::move(url)});
+  return id;
+}
+bool BrowserState::update_macro(std::uint64_t id, std::string name, std::string terminal_command, std::string url) {
+  if (name.empty() || name.size() > 40) return false;
+  if (terminal_command.size() > 256) return false;
+  if (url.size() > 2048) return false;
+  auto* macro = [&]() {
+    const auto it = std::find_if(macros_.begin(), macros_.end(), [id](const Macro& m) { return m.id == id; });
+    return it == macros_.end() ? nullptr : &*it;
+  }();
+  if (!macro) return false;
+  macro->name = std::move(name);
+  macro->terminal_command = std::move(terminal_command);
+  macro->url = std::move(url);
+  return true;
+}
+bool BrowserState::remove_macro(std::uint64_t macro_id) {
+  const auto it = std::find_if(macros_.begin(), macros_.end(), [macro_id](const Macro& m) { return m.id == macro_id; });
+  if (it == macros_.end()) return false;
+  macros_.erase(it);
+  return true;
+}
 }  // namespace aurora

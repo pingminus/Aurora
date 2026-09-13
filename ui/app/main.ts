@@ -30,6 +30,8 @@ async function send(command: Command, options: SendOptions = {}): Promise<void> 
     if (response.activeTab !== state.activeTab) addressDirty = false;
     state = response; tabBar.render(state); bookmarkBar.render(state); windowControls.render(state);
     renderAddress(); renderBookmarkButton();
+    if (command === 'createTab' && state.tabs.find(tab => tab.id === state.activeTab)?.url.startsWith('aurora://newtab'))
+      focusAddress();
     status.hidden = true; document.body.classList.remove('disconnected');
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : 'Native browser request failed';
@@ -115,11 +117,11 @@ window.addEventListener('aurora-focus-address', focusAddress);
 window.addEventListener('aurora-new-tab-address', event => {
   const tabId: unknown = (event as CustomEvent<unknown>).detail;
   if (typeof tabId !== 'number') return;
-  // Read the new native state before rendering/selecting its address. Ignore
-  // delayed creation callbacks after the user has activated another tab.
+  // Creation is asynchronous: refresh the native snapshot before selecting
+  // the address, and ignore callbacks for tabs the user has already left.
   void send('state').then(() => {
-    if (state.activeTab === tabId && !state.tabs.find(tab => tab.id === tabId)?.terminal)
-      focusAddress();
+    const tab = state.tabs.find(candidate => candidate.id === tabId);
+    if (state.activeTab === tabId && tab && !tab.terminal) focusAddress();
   });
 });
 window.addEventListener('aurora-open-commands', () => palette.open());
