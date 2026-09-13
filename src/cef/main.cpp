@@ -17,6 +17,9 @@
 #include "include/wrapper/cef_message_router.h"
 #include "resources.h"
 #include "cve_service.h"
+#include "terminal/session.h"
+#include "terminal_clipboard.h"
+#include <charconv>
 #include "tab_audio.h"
 #include "window_frame.h"
 
@@ -35,6 +38,7 @@ class Client final : public CefClient,
                      public CefDownloadHandler,
                      public CefResourceRequestHandler,
                      public CefKeyboardHandler,
+                     public CefFocusHandler,
                      public CefCommandHandler,
                      public CefDragHandler,
                      public CefPermissionHandler,
@@ -48,6 +52,8 @@ class Client final : public CefClient,
   CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
   CefRefPtr<CefPermissionHandler> GetPermissionHandler() override { return this; }
   CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override { return this; }
+  CefRefPtr<CefFocusHandler> GetFocusHandler() override { return this; }
+  bool OnSetFocus(CefRefPtr<CefBrowser>, FocusSource) override;
   CefRefPtr<CefCommandHandler> GetCommandHandler() override { return this; }
   CefRefPtr<CefDragHandler> GetDragHandler() override { return this; }
   void OnDraggableRegionsChanged(CefRefPtr<CefBrowser>,
@@ -108,10 +114,13 @@ class Client final : public CefClient,
                const CefString&,
                bool,
                CefRefPtr<Callback>) override;
+  void stop_terminal();
+  void OnLoadEnd(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, int) override;
   void OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser,
                                  TerminationStatus,
                                  int,
                                  const CefString&) override {
+    stop_terminal();
     router_->OnRenderProcessTerminated(browser);
     if (audio_)
       audio_->OnAudioStreamStopped(browser);
@@ -152,6 +161,7 @@ class Client final : public CefClient,
   uint64_t tab_;
   bool shell_;
   bool devtools_;
+  bool terminal_loaded_ = false;
   CefRefPtr<TabAudio> audio_;
   CefRefPtr<CefMessageRouterBrowserSide> router_;
   IMPLEMENT_REFCOUNTING(Client);
@@ -161,6 +171,22 @@ class Host {
  public:
   HWND window = nullptr;
   BrowserState state;
+  struct TerminalTab { std::shared_ptr<terminal::Session> session; uint64_t generation; };
+  std::map<uint64_t,TerminalTab> terminals;
+  uint64_t next_terminal_generation=1;
+  std::vector<std::shared_ptr<terminal::Session>> retired_terminals;
+  bool confirm_terminal_close(uint64_t id) {
+    const auto it=terminals.find(id);
+    if(it==terminals.end())return true;
+    if(!it->second.session->finished() && MessageBoxW(window,L"Close this terminal and stop its shell and all child processes? Unsaved work will be lost.",L"Close terminal",MB_OKCANCEL|MB_ICONWARNING|MB_DEFBUTTON2)!=IDOK)return false;
+    it->second.session->close();return true;
+  }
+  void create_terminal() {
+    if(terminals.size()>=8){MessageBoxW(window,L"Close a terminal before opening another (maximum eight).",L"Aurora",MB_OK);return;}
+    const auto id=state.create_terminal();if(!id)return;
+    terminals.emplace(id,TerminalTab{std::make_shared<terminal::Session>(),next_terminal_generation++});
+    create_view(id,"aurora://terminal/");
+  }
   CefRefPtr<CveService> cve_feed = new CveService;
   CefRefPtr<CefBrowser> shell;
   std::map<uint64_t, CefRefPtr<CefBrowser>> browsers;
@@ -172,7 +198,7 @@ class Host {
   bool closing = false;
   int pending = 0;
 
-  int toolbar_height() const { return MulDiv(112, static_cast<int>(GetDpiForWindow(window)), 96); }
+  int toolbar_height() const { return MulDiv(140, static_cast<int>(GetDpiForWindow(window)), 96); }
   void layout() {
     RECT area{};
     GetClientRect(window, &area);
@@ -218,6 +244,15 @@ class Host {
       MessageBoxW(window, L"Chromium could not create a browser view.", L"Aurora", MB_ICONERROR);
     }
   }
+  void focus_new_tab_address(uint64_t id) {
+    if (closing || state.active_tab() != id || terminals.contains(id) || !shell ||
+        shell->GetMainFrame()->GetURL() != kShellUrl)
+      return;
+    shell->GetHost()->SetFocus(true);
+    shell->GetMainFrame()->ExecuteJavaScript(
+        "window.dispatchEvent(new CustomEvent('aurora-new-tab-address',{detail:" +
+            std::to_string(id) + "}))", kShellUrl, 0);
+  }
   void create_tab(const std::string& url) {
     const auto id = state.create_tab(url);
     if (id)
@@ -245,7 +280,9 @@ class Host {
       auto entry = CefDictionaryValue::Create();
       entry->SetInt("id", static_cast<int>(tab.id));
       entry->SetString("url", tab.url);
-      entry->SetString("title", tab.title);
+      const auto terminal_it=terminals.find(tab.id);
+      entry->SetString("title",terminal_it!=terminals.end()?"Terminal · "+terminal_it->second.session->inspect().status:tab.title);
+      entry->SetBool("terminal",tab.terminal);
       entry->SetBool("active", tab.id == state.active_tab());
       entry->SetBool("muted", tab.muted);
       entry->SetInt("volume", tab.volume);
@@ -255,11 +292,23 @@ class Host {
       tabs->SetDictionary(index++, entry);
     }
     result->SetList("tabs", tabs);
+    auto bookmarks = CefListValue::Create();
+    size_t bookmark_index = 0;
+    for (const auto& bookmark : state.bookmarks()) {
+      auto entry = CefDictionaryValue::Create();
+      entry->SetInt("id", static_cast<int>(bookmark.id));
+      entry->SetString("title", bookmark.title);
+      entry->SetString("url", bookmark.url);
+      bookmarks->SetDictionary(bookmark_index++, entry);
+    }
+    result->SetList("bookmarks", bookmarks);
     auto value = CefValue::Create();
     value->SetDictionary(result);
     return CefWriteJSON(value, JSON_WRITER_DEFAULT).ToString();
   }
   void finish_close() {
+    std::erase_if(retired_terminals,[](const auto& session){return session->finished();});
+    if(!retired_terminals.empty())return;
     if (window && closing && pending == 0 && browsers.empty() && devtools.empty() && !shell) {
       const auto handle = window;
       window = nullptr;
@@ -268,9 +317,13 @@ class Host {
     }
   }
   void close() {
+    if (closing) return;
+    for(const auto& [id,terminal] : terminals) {
+      if(!terminal.session->finished() && MessageBoxW(window,L"Closing Aurora stops all terminal shells and child processes. Continue?",L"Close Aurora",MB_OKCANCEL|MB_ICONWARNING|MB_DEFBUTTON2)!=IDOK)return;
+      if(!terminal.session->finished())break;
+    }
+    for(auto& [id,terminal] : terminals)terminal.session->close();
     cve_feed->shutdown();
-    if (closing)
-      return;
     closing = true;
     for (auto& [id, output] : audio)
       output->close();
@@ -307,6 +360,20 @@ void Client::OnDraggableRegionsChanged(CefRefPtr<CefBrowser> browser,
   set_drag_regions(owner_.window, browser->GetHost()->GetWindowHandle(), rectangles);
 }
 
+void Client::OnLoadEnd(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame> frame, int) {
+  if (!frame->IsMain()) return;
+  terminal_loaded_ = true;
+  // Startup can create the content view before the shell document is ready.
+  if (shell_) owner_.focus_new_tab_address(owner_.state.active_tab());
+}
+bool Client::OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) {
+  if (shell_ || devtools_ || source != FOCUS_SOURCE_NAVIGATION) return false;
+  const auto url = browser->GetMainFrame()->GetURL().ToString();
+  // Loading the starting page must not steal focus back from the address bar.
+  // User clicks and terminal focus requests retain normal CEF behavior.
+  return url == "aurora://newtab" || url == "aurora://newtab/";
+}
+void Client::stop_terminal() { if(shell_||devtools_)return; const auto it=owner_.terminals.find(tab_);if(it!=owner_.terminals.end())it->second.session->close(); }
 Client::Client(Host& owner, uint64_t tab, bool shell, bool devtools)
     : owner_(owner), tab_(tab), shell_(shell), devtools_(devtools) {
   router_ = CefMessageRouterBrowserSide::Create(CefMessageRouterConfig{});
@@ -335,6 +402,7 @@ bool Client::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
   const bool control = (event.modifiers & EVENTFLAG_CONTROL_DOWN) != 0;
   const bool alt = (event.modifiers & EVENTFLAG_ALT_DOWN) != 0;
   const bool shift = (event.modifiers & EVENTFLAG_SHIFT_DOWN) != 0;
+  if (!shell_ && owner_.terminals.contains(tab_) && !(control && shift && event.windows_key_code=='L')) return false;
   if (control && !alt) {
     switch (event.windows_key_code) {
       case 'L':
@@ -358,6 +426,7 @@ bool Client::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
         owner_.layout();
         return true;
       case 'W':
+        if (!owner_.confirm_terminal_close(target_id)) return true;
         if (const auto output = owner_.audio.find(target_id); output != owner_.audio.end())
           output->second->close();
         if (owner_.state.close_tab(target_id)) {
@@ -465,11 +534,15 @@ void Client::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
       std::any_of(tabs.begin(), tabs.end(), [this](const auto& tab) { return tab.id == tab_; });
   if (owner_.closing || (!shell_ && !tab_exists))
     browser->GetHost()->CloseBrowser(true);
-  else
+  else {
     owner_.layout();
+    if (!shell_ && !devtools_) owner_.focus_new_tab_address(tab_);
+  }
 }
 void Client::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
+  stop_terminal();
+  if(const auto it=owner_.terminals.find(tab_);!shell_&&!devtools_&&it!=owner_.terminals.end()) {owner_.retired_terminals.push_back(it->second.session);owner_.terminals.erase(it);}
   router_->OnBeforeClose(browser);
   if (audio_)
     audio_->close();
@@ -513,6 +586,12 @@ bool Client::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     return false;  // Separate client: no product state or command bridge.
   if (shell_)
     return !frame->IsMain() || url != kShellUrl;
+  if (owner_.terminals.contains(tab_)) {
+    if (!frame->IsMain() || url != "aurora://terminal/") return true;
+    if (terminal_loaded_) stop_terminal();
+    return false;
+  }
+  if (url.starts_with("aurora://terminal")) return true;
   if (!frame->IsMain())
     return url.starts_with("aurora:");
   const auto target = resolve_navigation(url);
@@ -526,6 +605,40 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
                      bool persistent,
                      CefRefPtr<Callback> callback) {
   CEF_REQUIRE_UI_THREAD();
+  if (!shell_ && owner_.terminals.contains(tab_)) {
+    const auto found=owner_.browsers.find(tab_);
+    auto fail=[&](const char* message){callback->Failure(400,message);return true;};
+    if(devtools_||owner_.closing||found==owner_.browsers.end()||found->second->GetIdentifier()!=browser->GetIdentifier()||!frame->IsMain()||frame->GetURL()!="aurora://terminal/"||persistent||request.length()>32768)return fail("Unauthorized terminal request");
+    auto value=CefParseJSON(request,JSON_PARSER_RFC);auto d=value&&value->GetType()==VTYPE_DICTIONARY?value->GetDictionary():nullptr;
+    if(!d||d->GetType("version")!=VTYPE_INT||d->GetInt("version")!=1||d->GetType("command")!=VTYPE_STRING)return fail("Invalid terminal envelope");
+    const auto command=d->GetString("command").ToString();auto& term=owner_.terminals.at(tab_);
+    const bool hello=command=="terminalHello";
+    if(!hello&&(d->GetType("session")!=VTYPE_STRING||d->GetString("session").ToString()!=std::to_string(term.generation)))return fail("Stale terminal session");
+    uint64_t cursor=0;
+    if(command=="terminalRead") {
+      if(d->GetSize()!=4||d->GetType("cursor")!=VTYPE_STRING)return fail("Invalid terminal cursor");
+      auto text=d->GetString("cursor").ToString();auto result=std::from_chars(text.data(),text.data()+text.size(),cursor);
+      if(text.empty()||result.ec!=std::errc{}||result.ptr!=text.data()+text.size())return fail("Invalid terminal cursor");
+    } else if(command=="terminalInput") {
+      if(d->GetSize()!=4||d->GetType("data")!=VTYPE_STRING||!term.session->input(d->GetString("data").ToString()))return fail("Terminal input rejected or buffer full");
+      callback->Success("{}");return true;
+    } else if(command=="terminalCopy"||command=="terminalPaste") {
+      const bool copy=command=="terminalCopy";
+      if(d->GetSize()!=(copy?4u:3u)||(copy&&d->GetType("data")!=VTYPE_STRING))return fail("Invalid clipboard command");
+      auto text=terminal_clipboard(owner_.window,copy?std::optional<std::wstring>(d->GetString("data").ToWString()):std::nullopt);
+      if(!text)return fail("Clipboard unavailable or exceeds 32 KiB of text; focus Aurora and retry");
+      auto out=CefDictionaryValue::Create();out->SetString("text",*text);auto response=CefValue::Create();response->SetDictionary(out);callback->Success(CefWriteJSON(response,JSON_WRITER_DEFAULT));return true;
+    } else if(command=="terminalResize") {
+      if(d->GetSize()!=5||d->GetType("columns")!=VTYPE_INT||d->GetType("rows")!=VTYPE_INT||!term.session->resize(d->GetInt("columns"),d->GetInt("rows")))return fail("Invalid terminal dimensions");
+      callback->Success("{}");return true;
+    } else if(command=="terminalRestart") {
+      if(d->GetSize()!=3||!term.session->finished())return fail("Wait for the previous shell to exit");
+      term.session=std::make_shared<terminal::Session>();term.generation=owner_.next_terminal_generation++;
+    } else if(!hello||d->GetSize()!=2)return fail("Unknown terminal command");
+    auto snapshot=hello?std::optional<terminal::Snapshot>(term.session->inspect()):term.session->read(cursor);if(!snapshot)return fail("Invalid output acknowledgement; reload to stop and restart");
+    auto out=CefDictionaryValue::Create();out->SetInt("version",1);out->SetString("session",std::to_string(term.generation));out->SetString("status",snapshot->status);out->SetString("shell",snapshot->shell);out->SetString("error",snapshot->error);out->SetString("cursor",std::to_string(snapshot->next));out->SetString("data",CefBase64Encode(snapshot->bytes.data(),snapshot->bytes.size()));
+    auto response=CefValue::Create();response->SetDictionary(out);callback->Success(CefWriteJSON(response,JSON_WRITER_DEFAULT));return true;
+  }
   if (!shell_) {
     const auto found = owner_.browsers.find(tab_);
     const auto url = frame->GetURL().ToString();
@@ -538,9 +651,10 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     auto d = value && value->GetType() == VTYPE_DICTIONARY ? value->GetDictionary() : nullptr;
     if (!d || d->GetSize() != 2 || d->GetType("version") != VTYPE_INT || d->GetInt("version") != 1 ||
         d->GetType("command") != VTYPE_STRING ||
-        (d->GetString("command") != "cveState" && d->GetString("command") != "refreshCves")) {
+        (d->GetString("command") != "cveState" && d->GetString("command") != "refreshCves" && d->GetString("command") != "createTerminal")) {
       callback->Failure(400, "Invalid read-only feed command"); return true;
     }
+    if(d->GetString("command")=="createTerminal"){owner_.create_terminal();owner_.layout();callback->Success("{}");return true;}
     owner_.cve_feed->poll(d->GetString("command") == "refreshCves");
     callback->Success(owner_.cve_feed->snapshot()); return true;
   }
@@ -564,7 +678,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   msg->GetKeys(keys);
   for (const auto& key : keys) {
     if (key != "version" && key != "command" && key != "tabId" && key != "url" && key != "muted" &&
-        key != "volume")
+        key != "volume" && key != "bookmarkId")
       return fail("Unknown field");
   }
   if (msg->HasKey("tabId") && (msg->GetType("tabId") != VTYPE_INT || msg->GetInt("tabId") <= 0))
@@ -572,6 +686,10 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   if (msg->HasKey("url") && msg->GetType("url") != VTYPE_STRING)
     return fail("Invalid URL");
   const auto command = msg->GetString("command").ToString();
+  if (msg->HasKey("bookmarkId") &&
+      (command != "removeBookmark" || msg->GetType("bookmarkId") != VTYPE_INT ||
+       msg->GetInt("bookmarkId") <= 0))
+    return fail("Invalid bookmark ID");
   if (msg->HasKey("muted") && (command != "setTabMuted" || msg->GetType("muted") != VTYPE_BOOL))
     return fail("Invalid mute argument");
   if (msg->HasKey("volume") && (command != "setTabVolume" || msg->GetType("volume") != VTYPE_INT ||
@@ -580,6 +698,8 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   if ((command == "setTabMuted" || command == "setTabVolume") &&
       (!msg->HasKey("tabId") || !msg->HasKey(command == "setTabMuted" ? "muted" : "volume")))
     return fail("Audio commands require an explicit tab and value");
+  if (command == "removeBookmark" && !msg->HasKey("bookmarkId"))
+    return fail("Bookmark commands require a bookmark ID");
   const auto id = msg->HasKey("tabId") ? static_cast<uint64_t>(msg->GetInt("tabId"))
                                        : owner_.state.active_tab();
   auto it = owner_.browsers.find(id);
@@ -604,6 +724,9 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     if (!restored)
       return fail("No closed tab");
     owner_.synchronize();
+  } else if (command == "removeBookmark") {
+    if (!owner_.state.remove_bookmark(static_cast<uint64_t>(msg->GetInt("bookmarkId"))))
+      return fail("Bookmark could not be removed");
   } else {
     const auto& open_tabs = owner_.state.tabs();
     if (it == owner_.browsers.end() || std::none_of(open_tabs.begin(), open_tabs.end(),
@@ -621,9 +744,13 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
           if (tab.id == id)
             audio_it->second->set_settings(tab.muted, tab.volume);
       }
+    } else if (command == "addBookmark") {
+      if (!owner_.state.add_bookmark(id))
+        return fail("This page cannot be bookmarked");
     } else if (command == "activateTab")
       owner_.state.activate_tab(id);
     else if (command == "closeTab") {
+      if(!owner_.confirm_terminal_close(id))return fail("Terminal close canceled");
       const auto audio_it = owner_.audio.find(id);
       if (audio_it != owner_.audio.end())
         audio_it->second->close();
@@ -632,6 +759,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
       if (owner_.state.tabs().empty())
         owner_.create_tab("aurora://newtab");
     } else if (command == "duplicateTab") {
+      if(owner_.terminals.contains(id))return fail("Open a new terminal instead of duplicating a session");
       (void)owner_.state.duplicate_tab(id);
       owner_.synchronize();
     } else if (command == "navigate") {
@@ -667,6 +795,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
   if (auto result = handle_frame_message(window, message, wparam, lparam))
     return *result;
   if (host) {
+    if(message==WM_TIMER && wparam==1){host->finish_close();return 0;}
     if (message == WM_SIZE) {
       host->layout();
       return 0;
@@ -705,7 +834,7 @@ class App final : public CefApp, public CefBrowserProcessHandler, public CefRend
   void OnContextCreated(CefRefPtr<CefBrowser> browser,
                         CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override {
-    if (frame->IsMain() && (frame->GetURL() == kShellUrl || frame->GetURL() == "aurora://newtab/" || frame->GetURL() == "aurora://newtab"))
+    if (frame->IsMain() && (frame->GetURL() == kShellUrl || frame->GetURL() == "aurora://newtab/" || frame->GetURL() == "aurora://newtab" || frame->GetURL() == "aurora://terminal/"))
       renderer_->OnContextCreated(browser, frame, context);
   }
   void OnContextReleased(CefRefPtr<CefBrowser> browser,
@@ -780,6 +909,7 @@ extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,
       (std::filesystem::path(local) / "Aurora" / "Profiles" / "Default").wstring();
   if (!CefInitialize(args, settings, app, sandbox_info))
     return 6;
+  SetTimer(owner.window,1,50,nullptr);
   ShowWindow(owner.window, show);
   CefRunMessageLoop();
   aurora::host = nullptr;

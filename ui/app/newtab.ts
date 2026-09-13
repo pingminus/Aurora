@@ -71,3 +71,14 @@ void request('cveState');
 document.querySelector<HTMLAnchorElement>('.scroll-cue')?.addEventListener('click', event => {
   event.preventDefault(); document.querySelector('#cve-feed')?.scrollIntoView();
 });
+
+const launchTerminal = document.querySelector<HTMLButtonElement>('#open-terminal')!;
+launchTerminal.addEventListener('click', () => {
+  const feedback = document.querySelector<HTMLElement>('#terminal-launch-status')!;
+  if (!window.cefQuery) { feedback.textContent = 'Open this page in Aurora to launch a terminal.'; return; }
+  launchTerminal.disabled = true;
+  const timeout = window.setTimeout(() => { launchTerminal.disabled = false; feedback.textContent = 'Terminal creation did not respond. Check your tabs before retrying.'; }, 5000);
+  window.cefQuery({request: JSON.stringify({version: 1, command: 'createTerminal'}), persistent: false,
+    onSuccess: () => { clearTimeout(timeout); launchTerminal.disabled = false; feedback.textContent = ''; },
+    onFailure: () => { clearTimeout(timeout); launchTerminal.disabled = false; feedback.textContent = 'Terminal could not be opened.'; }});
+});

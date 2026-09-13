@@ -18,6 +18,10 @@ The C++ core includes transient workspace/pin/mute transitions, but these are no
 
 Reserve internal product routes for new tab, settings, history, bookmarks, downloads, workspaces, about, flags and diagnostics. Introduce each route alongside its actual implementation. `about:aurora` may eventually alias the about route; do not show fabricated diagnostics.
 
+### Bookmark bar status (2026-09-13)
+
+A session-lifetime bookmark collection and a bookmark bar below the navigation row are implemented: star-to-save from the active tab, idempotent add by URL, remove from the bar, and click-to-navigate. The chrome is now 140 CSS pixels (48 tab row + 64 navigation + 28 bookmark bar). Bookmarks are not persisted and are not part of the durable-profile milestone.
+
 ### Audio/frame status (2026-09-12)
 
 Implemented native per-tab mute/volume, accessible shell controls and custom title bar. Two-tab PCM output isolation is verified. Final drag/resize check, forced renderer recovery, video synchronization and device-loss recovery remain open; see AUDIO.md and TESTING.md. This does not complete session persistence or the broader browser roadmap.

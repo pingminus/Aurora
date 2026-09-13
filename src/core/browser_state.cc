@@ -22,6 +22,10 @@ std::uint64_t BrowserState::create_tab(std::string input) {
   return id;
 }
 
+std::uint64_t BrowserState::create_terminal() {
+ const auto id=create_tab();auto* tab=find(id);if(!tab)return 0;
+ tab->terminal=true;tab->url="aurora://terminal/";tab->title="Terminal";return id;
+}
 void BrowserState::select_workspace_fallback() {
   const auto it = std::find_if(tabs_.begin(), tabs_.end(), [this](const Tab& t) {
     return t.workspace_id == active_workspace_;
@@ -35,7 +39,7 @@ bool BrowserState::close_tab(std::uint64_t id) {
   if (it == tabs_.end())
     return false;
   const auto index = static_cast<std::size_t>(it - tabs_.begin());
-  closed_tabs_.push_back(*it);
+  if (!it->terminal) closed_tabs_.push_back(*it);
   if (closed_tabs_.size() > 25)
     closed_tabs_.erase(closed_tabs_.begin());
   tabs_.erase(it);
@@ -64,6 +68,7 @@ bool BrowserState::navigate(std::uint64_t id, std::string input) {
   auto* tab = find(id);
   if (!tab)
     return false;
+  if (tab->terminal) return input == "aurora://terminal/";
   auto target = resolve_navigation(input);
   last_error_ = target.error;
   if (!target.allowed)
@@ -75,7 +80,7 @@ bool BrowserState::navigate(std::uint64_t id, std::string input) {
 
 std::uint64_t BrowserState::duplicate_tab(std::uint64_t id) {
   const auto* original = find(id);
-  if (!original)
+  if (!original || original->terminal)
     return 0;
   auto copy = *original;
   copy.id = next_tab_id_++;
@@ -127,6 +132,28 @@ bool BrowserState::set_title(std::uint64_t id, std::string title) {
   if (title.size() > 4096)
     title.resize(4096);
   tab->title = std::move(title);
+  return true;
+}
+std::uint64_t BrowserState::add_bookmark(std::uint64_t tab_id) {
+  const auto* tab = find(tab_id);
+  if (!tab || tab->terminal || tab->url.empty() || tab->url.starts_with("aurora://"))
+    return 0;
+  const auto existing =
+      std::find_if(bookmarks_.begin(), bookmarks_.end(),
+                   [&tab](const Bookmark& bookmark) { return bookmark.url == tab->url; });
+  if (existing != bookmarks_.end())
+    return existing->id;
+  const auto id = next_bookmark_id_++;
+  bookmarks_.push_back({id, tab->title, tab->url});
+  return id;
+}
+bool BrowserState::remove_bookmark(std::uint64_t bookmark_id) {
+  const auto it =
+      std::find_if(bookmarks_.begin(), bookmarks_.end(),
+                   [bookmark_id](const Bookmark& bookmark) { return bookmark.id == bookmark_id; });
+  if (it == bookmarks_.end())
+    return false;
+  bookmarks_.erase(it);
   return true;
 }
 std::uint64_t BrowserState::create_workspace(std::string name) {

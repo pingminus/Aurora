@@ -64,3 +64,6 @@ h2 { font-size: clamp(27px, 4vw, 38px); font-weight: 400; letter-spacing: -.035e
 @supports (backdrop-filter: blur(1px)) { .search, .favorite-links a, .cve-card { background: var(--glass); backdrop-filter: blur(14px); } }
 @media (prefers-reduced-transparency: reduce) { .search, .favorite-links a, .cve-card { background: var(--surface); backdrop-filter: none; } }
 @media (max-width: 600px) { .cve-card { padding: 18px 14px; gap: 14px; grid-template-columns: 62px minmax(0,1fr); } .cve-score { padding-right: 12px; } .feed-heading { align-items: flex-start; } }
+
+.terminal-launch { margin-top: 18px; }
+#terminal-launch-status { color: var(--muted); font-size: 12px; }

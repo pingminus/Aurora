@@ -108,13 +108,41 @@ void closed_tab_limit() {
   CHECK(count == 25);
 }
 
+void bookmarks() {
+  aurora::BrowserState state;
+  const auto tab = state.create_tab("https://example.com");
+  CHECK(state.set_title(tab, "Example"));
+  const auto saved = state.add_bookmark(tab);
+  CHECK(saved != 0 && state.bookmarks().size() == 1);
+  CHECK(state.bookmarks().front().id == saved);
+  CHECK(state.bookmarks().front().title == "Example");
+  CHECK(state.bookmarks().front().url == "https://example.com");
+  // Adding the same URL again is idempotent.
+  CHECK(state.add_bookmark(tab) == saved && state.bookmarks().size() == 1);
+  CHECK(state.add_bookmark(0) == 0 && state.bookmarks().size() == 1);
+  const auto other = state.create_tab("https://example.org");
+  CHECK(state.set_title(other, "Other"));
+  const auto second = state.add_bookmark(other);
+  CHECK(second > saved && state.bookmarks().size() == 2);
+  CHECK(state.remove_bookmark(saved));
+  CHECK(state.bookmarks().size() == 1);
+  CHECK(!state.remove_bookmark(saved) && !state.remove_bookmark(second + 99));
+  // Bookmarks survive the tab that created them.
+  CHECK(state.close_tab(tab) && state.bookmarks().size() == 1);
+  CHECK(state.add_bookmark(tab) == 0);
+  // Internal pages and terminals are not bookmarked.
+  const auto newtab = state.create_tab("aurora://newtab");
+  CHECK(state.add_bookmark(newtab) == 0 && state.add_bookmark(other + 999) == 0);
+  CHECK(state.bookmarks().size() == 1);
+}
+
 void randomized_state_invariants() {
   aurora::BrowserState state;
   const auto workspace = state.create_workspace("Work");
   std::mt19937 random(2026);
   for (int i = 0; i < 5000; ++i) {
     const auto id = state.tabs().empty() ? 0 : state.tabs()[random() % state.tabs().size()].id;
-    switch (random() % 8) {
+    switch (random() % 10) {
       case 0:
         (void)state.create_tab();
         break;
@@ -139,6 +167,15 @@ void randomized_state_invariants() {
       case 7:
         state.navigate(id, "example.com");
         break;
+      case 8:
+        (void)state.add_bookmark(id);
+        break;
+      case 9: {
+        const auto& marks = state.bookmarks();
+        if (!marks.empty())
+          state.remove_bookmark(marks[random() % marks.size()].id);
+        break;
+      }
     }
     std::set<std::uint64_t> ids;
     bool active_found = false;
@@ -155,11 +192,18 @@ void randomized_state_invariants() {
     }
     CHECK(active_found == workspace_has_tabs);
     CHECK(active_found || state.active_tab() == 0);
+    std::set<std::uint64_t> mark_ids;
+    for (const auto& mark : state.bookmarks()) {
+      CHECK(mark.id != 0 && mark_ids.insert(mark.id).second);
+      CHECK(!mark.url.empty() && mark.url.starts_with("aurora://") == false);
+    }
   }
 }
 }  // namespace
 
 int main() {
+  { aurora::BrowserState state;const auto id=state.create_terminal();CHECK(id!=0&&state.tabs().back().terminal);CHECK(!state.navigate(id,"https://example.com"));CHECK(state.duplicate_tab(id)==0);CHECK(state.close_tab(id));CHECK(state.reopen_closed_tab()==0);CHECK(state.create_tab("aurora://terminal/")==0); }
+
   {
     aurora::BrowserState audio;
     const auto a = audio.create_tab("https://example.com");
@@ -191,6 +235,7 @@ int main() {
   lifecycle();
   workspaces();
   closed_tab_limit();
+  bookmarks();
   randomized_state_invariants();
   if (failures)
     std::cerr << failures << " checks failed\n";

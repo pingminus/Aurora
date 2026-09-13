@@ -59,9 +59,11 @@ export class TabBar {
       const label = `${tab.muted ? 'Unmute' : 'Mute'} ${title}`;
       if (mute.getAttribute('aria-pressed') !== String(tab.muted)) mute.replaceChildren(icon(tab.muted ? 'muted' : 'speaker'));
       mute.setAttribute('aria-pressed', String(tab.muted)); mute.setAttribute('aria-label', label);
+      mute.hidden = Boolean(tab.terminal);
       mute.title = tab.audioError || label;
       node.classList.toggle('audio-error', Boolean(tab.audioError));
       const slider = node.querySelector<HTMLInputElement>('.tab-volume')!;
+      slider.hidden = Boolean(tab.terminal);
       if (!slider.dataset.editing) slider.value = String(tab.volume);
       slider.setAttribute('aria-label', `Volume for ${title}`);
       slider.setAttribute('aria-valuetext', `${slider.value}%${tab.muted ? ', muted' : ''}`);

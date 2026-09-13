@@ -1,8 +1,8 @@
-html, body { height: 112px; overflow: hidden; }
+html, body { height: 140px; overflow: hidden; }
 .tab-volume { width: 60px; min-width: 60px; height: 24px; margin: 0 7px 0 0; accent-color: var(--accent); cursor: pointer; }
 .tab-mute[aria-pressed="true"] { color: var(--accent); }
 .tab.audio-error { border-color: #df936a; }
-.browser-chrome { height: 112px; background: radial-gradient(ellipse at 12% 0%, #8f91d31c, transparent 52%), var(--bg); border-bottom: 1px solid var(--border); }
+.browser-chrome { height: 140px; background: radial-gradient(ellipse at 12% 0%, #8f91d31c, transparent 52%), var(--bg); border-bottom: 1px solid var(--border); }
 .tab-row { height: 48px; display: flex; align-items: center; gap: 8px; padding: 6px 0 0 16px; user-select: none; }
 .wordmark { width: 138px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; font-size: 10px; font-weight: 650; letter-spacing: .23em; }
 .aurora-mark { display: block; height: 20px; width: 18px; border: 2px solid var(--accent); border-bottom: 0; transform: skew(-14deg); border-radius: 8px 8px 2px 2px; position: relative; }
@@ -29,6 +29,19 @@ html, body { height: 112px; overflow: hidden; }
 .window-controls .window-close:active { background: #a8222d; color: #fff; }
 .window-controls .icon-button:focus-visible { outline-offset: -5px; }
 .navigation { height: 64px; display: flex; align-items: center; gap: 4px; padding: 8px 16px 12px; position: relative; }
+.navigation .icon-button[aria-pressed="true"] { color: var(--accent); }
+.bookmark-bar { height: 28px; display: flex; align-items: center; gap: 2px; padding: 0 14px 4px; overflow-x: auto; scrollbar-width: none; }
+.bookmark-bar::-webkit-scrollbar { display: none; }
+.bookmark { display: inline-flex; align-items: center; flex-shrink: 0; border-radius: var(--radius-sm); }
+.bookmark:hover, .bookmark:focus-within { background: var(--surface-hover); }
+.bookmark-open { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 180px; background: transparent; border: 0; padding: 3px 8px; font-size: 12px; color: var(--muted); }
+.bookmark:hover .bookmark-open, .bookmark:focus-within .bookmark-open { color: var(--text); }
+.bookmark-open svg { width: 13px; height: 13px; color: var(--accent); flex-shrink: 0; }
+.bookmark-open span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bookmark-remove { width: 22px; height: 22px; margin-right: 4px; opacity: 0; flex-shrink: 0; }
+.bookmark:hover .bookmark-remove, .bookmark:focus-within .bookmark-remove { opacity: 1; }
+.bookmark-remove svg { width: 12px; height: 12px; }
+.bookmark-empty { font-size: 11px; color: var(--muted); padding-left: 6px; user-select: none; }
 .address-form { margin: 0 10px; display: flex; align-items: center; gap: 11px; flex: 1; height: 40px; min-width: 0; padding: 0 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); transition: border-color var(--fast), box-shadow var(--fast); }
 .address-form:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent); }
 #address-icon { display: flex; color: var(--muted); }
@@ -53,3 +66,5 @@ kbd { font-family: inherit; font-size: 10px; color: var(--muted); white-space: n
 
 @supports (backdrop-filter: blur(1px)) { .address-form, .tab.active { background: var(--glass); backdrop-filter: blur(12px); } }
 @media (prefers-reduced-transparency: reduce) { .address-form, .tab.active { background: var(--surface); backdrop-filter: none; } }
+
+.tab-mute[hidden], .tab-volume[hidden] { display: none; }

@@ -48,3 +48,9 @@ The populated CVE cards also passed an actual window scroll check. The in-page f
 
 ## Daily feed verification — 2026-09-12
 Changed the feed to midnight UTC through now, with previous-day cache invalidation. Core regression checks cover midnight exclusion/inclusion, future records and next-day invalidation. Both standalone CTest suites and all twelve UI tests pass; the native Release build passes. Actual packaged Aurora loaded 80 CVEs with request interval ending 16:07:25 UTC and successful completion at 16:07:26 UTC (approximately one second for this run). Its first scores were 10.0, 9.9, 9.8. This measurement is a single live run, not a guaranteed response time. It supersedes weekly scope and ascending-order descriptions in earlier historical verification entries.
+
+## New-tab address focus — 2026-09-13
+
+Implemented native shell focus plus a tab-ID-scoped presentation event on new browsing views. Terminal views are excluded. Verify packaged behavior with the plus button, Ctrl+T from web content, rapid tab creation/switching, and Open terminal; typing should enter the address on browsing tabs and the shell on terminal tabs. Clicking the starting-page search must still work.
+
+Typecheck and all 14 UI tests passed. Rebuilt core and both CTest suites passed. Native changed sources compiled, but Release linking was blocked by the running package locking aurora.dll. Packaged focus behavior has not yet been verified.

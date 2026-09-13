@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NativeClient } from '../dist/ipc/client.js';
 
-const state = JSON.stringify({ version: 1, tabs: [], activeTab: 0 });
+const state = JSON.stringify({ version: 1, tabs: [], activeTab: 0, bookmarks: [] });
 const request = { version: 1, command: 'state' };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 

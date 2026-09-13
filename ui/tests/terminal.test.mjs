@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {parseTerminal} from '../dist/ipc/terminal-protocol.js';
+const state={version:1,session:'1',cursor:'0',status:'running',shell:'PowerShell',error:'',data:''};
+test('terminal validates session, cursor, state and byte transport',()=>{assert.equal(parseTerminal(JSON.stringify(state)).status,'running');for(const changed of [{session:'other'},{cursor:-1},{data:'<script>'},{status:'fake'},{version:2}])assert.throws(()=>parseTerminal(JSON.stringify({...state,...changed})));});
+test('terminal transport preserves split UTF-8 for streaming decoder',()=>{const decoder=new TextDecoder();const first=parseTerminal(JSON.stringify({...state,data:'4oI='}));const second=parseTerminal(JSON.stringify({...state,data:'rA=='}));assert.equal(decoder.decode(Buffer.from(first.data,'base64'),{stream:true}), '');assert.equal(decoder.decode(Buffer.from(second.data,'base64'),{stream:true}),'€');});

@@ -17,10 +17,10 @@ class Resources final : public CefSchemeHandlerFactory {
       return nullptr;
     const auto host = CefString(&parts.host).ToString();
     auto path = CefString(&parts.path).ToString();
-    if (host != "shell" && host != "newtab")
+    if (host != "shell" && host != "newtab" && host != "terminal")
       return nullptr;
     if (path.empty() || path == "/")
-      path = host == "shell" ? "/index.html" : "/newtab.html";
+      path = host == "shell" ? "/index.html" : host == "terminal" ? "/terminal.html" : "/newtab.html";
     // Serve only packaged assets; no URL decoding or filesystem traversal.
     if (path.find("..") != std::string::npos || path.find('%') != std::string::npos ||
         path.find('\\') != std::string::npos || path.find(':') != std::string::npos)
@@ -43,8 +43,9 @@ class Resources final : public CefSchemeHandlerFactory {
       return nullptr;
     CefResponse::HeaderMap headers;
     headers.emplace("Content-Security-Policy",
-                    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' "
-                    "data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+                    host == "terminal"
+                      ? "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+                      : "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
     headers.emplace("X-Content-Type-Options", "nosniff");
     return new CefStreamResourceHandler(200, "OK", mime, headers, stream);
   }
@@ -57,5 +58,6 @@ class Resources final : public CefSchemeHandlerFactory {
 void register_resources(const std::filesystem::path& directory) {
   CefRegisterSchemeHandlerFactory("aurora", "shell", new Resources(directory));
   CefRegisterSchemeHandlerFactory("aurora", "newtab", new Resources(directory));
+  CefRegisterSchemeHandlerFactory("aurora", "terminal", new Resources(directory));
 }
 }  // namespace aurora

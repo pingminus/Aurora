@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Terminal</title><link rel="stylesheet" href="theme/tokens.css"><link rel="stylesheet" href="vendor/xterm.css"><link rel="stylesheet" href="styles/terminal.css">
+</head><body>
+<header class="terminal-header"><div><strong>TERMINAL</strong><span id="terminal-state" role="status">Starting shell…</span></div><nav aria-label="Terminal controls"><button id="copy" type="button">Copy</button><button id="paste" type="button">Paste</button><button id="restart" type="button" disabled>Restart shell</button></nav></header>
+<p class="terminal-help">Ctrl+C interrupts · Ctrl+Shift+C/V copies/pastes · Ctrl+Shift+L focuses the address bar. Closing this tab stops its processes. Reload stops the shell; restart explicitly.</p>
+<p id="terminal-error" role="alert" hidden></p>
+<div id="terminal" aria-label="Interactive terminal"></div>
+<script src="vendor/xterm.js"></script><script src="vendor/addon-fit.js"></script><script type="module" src="app/terminal.js"></script>
+</body></html>
