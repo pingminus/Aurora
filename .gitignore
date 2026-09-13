@@ -13,3 +13,4 @@
 *.log
 /artifacts/
 .cache/
+opencode.json
