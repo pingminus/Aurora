@@ -1,4 +1,4 @@
-# AURORA
+# AURORA STILL IN PROGRESS
 
 A C++20 browser platform using Chromium through CEF, with a TypeScript, HTML and CSS browser interface. AURORA's core owns browser state; the frontend presents it through a validated command boundary.
 
