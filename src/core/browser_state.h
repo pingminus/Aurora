@@ -54,6 +54,7 @@ class BrowserState {
   // Persistence is a later profile milestone.
   [[nodiscard]] std::uint64_t add_bookmark(std::uint64_t tab_id);
   bool remove_bookmark(std::uint64_t bookmark_id);
+  bool rename_bookmark(std::uint64_t bookmark_id, std::string title);
   [[nodiscard]] const std::vector<Bookmark>& bookmarks() const { return bookmarks_; }
   // Macros are in-memory, session-lifetime (documented limitation).
   [[nodiscard]] std::uint64_t add_macro(std::string name, std::string terminal_command, std::string url);

@@ -6,6 +6,24 @@ const state = JSON.stringify({ version: 1, tabs: [], activeTab: 0, bookmarks: []
 const request = { version: 1, command: 'state' };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
+test('bookmark rename transports the title and recovers after native rejection', async () => {
+  const calls = [];
+  globalThis.window = { setTimeout, clearTimeout, cefQuery: query => { calls.push(query); return calls.length; } };
+  const client = new NativeClient();
+  const rename = { version: 1, command: 'renameBookmark', bookmarkId: 7, title: '  ' };
+  const rejected = assert.rejects(client.request(rename), /Invalid title/);
+  await tick();
+  assert.deepEqual(JSON.parse(calls[0].request), rename);
+  calls[0].onFailure(400, 'Invalid title');
+  await rejected;
+  const title = '<b>Documentation</b> — 日本語';
+  const saved = client.request({ ...rename, title });
+  await tick();
+  const bookmark = { id: 7, title, url: 'https://example.com' };
+  calls[1].onSuccess(JSON.stringify({ version: 1, tabs: [], activeTab: 0, bookmarks: [bookmark] }));
+  assert.deepEqual((await saved).bookmarks, [bookmark]);
+});
+
 test('bridge rejects standalone presentation without inventing browser state', async () => {
   globalThis.window = {};
   await assert.rejects(new NativeClient().request(request), /Native connection unavailable/);

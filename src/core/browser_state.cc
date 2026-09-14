@@ -147,6 +147,21 @@ std::uint64_t BrowserState::add_bookmark(std::uint64_t tab_id) {
   bookmarks_.push_back({id, tab->title, tab->url});
   return id;
 }
+bool BrowserState::rename_bookmark(std::uint64_t bookmark_id, std::string title) {
+  if (title.size() > 256 ||
+      title.find_first_not_of(" \t\r\n") == std::string::npos) {
+    return false;
+  }
+
+  for (Bookmark& bookmark : bookmarks_) {
+    if (bookmark.id == bookmark_id) {
+      bookmark.title = title;
+      return true;
+    }
+  }
+  // We checked every bookmark and found no match.
+  return false;
+}
 bool BrowserState::remove_bookmark(std::uint64_t bookmark_id) {
   const auto it =
       std::find_if(bookmarks_.begin(), bookmarks_.end(),

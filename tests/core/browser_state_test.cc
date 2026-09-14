@@ -136,6 +136,33 @@ void bookmarks() {
   CHECK(state.bookmarks().size() == 1);
 }
 
+void rename_bookmarks() {
+  opengod::BrowserState state;
+  const auto tab = state.create_tab("https://example.com");
+  const auto id = state.add_bookmark(tab);
+  CHECK(state.rename_bookmark(id, "Documentation"));
+  CHECK(state.bookmarks().front().title == "Documentation");
+  CHECK(state.bookmarks().front().id == id);
+  CHECK(state.bookmarks().front().url == "https://example.com");
+  CHECK(!state.rename_bookmark(id, ""));
+  CHECK(!state.rename_bookmark(id, " \t\r\n"));
+  CHECK(!state.rename_bookmark(id, std::string(257, 'x')));
+  CHECK(!state.rename_bookmark(0, "Missing"));
+  CHECK(!state.rename_bookmark(id + 999, "Missing"));
+  CHECK(state.bookmarks().front().title == "Documentation");
+  CHECK(state.rename_bookmark(id, std::string(256, 'x')));
+  std::string unicode;
+  for (int i = 0; i < 128; ++i) unicode += "\xc3\xa9";
+  CHECK(state.rename_bookmark(id, unicode));
+  CHECK(!state.rename_bookmark(id, unicode + "x"));
+  CHECK(state.bookmarks().front().title == unicode);
+  CHECK(state.close_tab(tab));
+  CHECK(state.rename_bookmark(id, "After closing tab"));
+  CHECK(state.bookmarks().size() == 1);
+  CHECK(state.remove_bookmark(id));
+  CHECK(!state.rename_bookmark(id, "Removed"));
+}
+
 void randomized_state_invariants() {
   opengod::BrowserState state;
   const auto workspace = state.create_workspace("Work");
@@ -236,6 +263,7 @@ int main() {
   workspaces();
   closed_tab_limit();
   bookmarks();
+  rename_bookmarks();
   randomized_state_invariants();
   if (failures)
     std::cerr << failures << " checks failed\n";

@@ -822,7 +822,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   msg->GetKeys(keys);
   for (const auto& key : keys) {
     if (key != "version" && key != "command" && key != "tabId" && key != "url" && key != "muted" &&
-        key != "volume" && key != "bookmarkId")
+        key != "volume" && key != "bookmarkId" && key != "title")
       return fail("Unknown field");
   }
   if (msg->HasKey("tabId") && (msg->GetType("tabId") != VTYPE_INT || msg->GetInt("tabId") <= 0))
@@ -831,7 +831,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     return fail("Invalid URL");
   const auto command = msg->GetString("command").ToString();
   if (msg->HasKey("bookmarkId") &&
-      (command != "removeBookmark" || msg->GetType("bookmarkId") != VTYPE_INT ||
+      ((command != "removeBookmark" && command != "renameBookmark") || msg->GetType("bookmarkId") != VTYPE_INT ||
        msg->GetInt("bookmarkId") <= 0))
     return fail("Invalid bookmark ID");
   if (msg->HasKey("muted") && (command != "setTabMuted" || msg->GetType("muted") != VTYPE_BOOL))
@@ -842,8 +842,13 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   if ((command == "setTabMuted" || command == "setTabVolume") &&
       (!msg->HasKey("tabId") || !msg->HasKey(command == "setTabMuted" ? "muted" : "volume")))
     return fail("Audio commands require an explicit tab and value");
-  if (command == "removeBookmark" && !msg->HasKey("bookmarkId"))
+  if ((command == "removeBookmark" || command == "renameBookmark") && !msg->HasKey("bookmarkId"))
     return fail("Bookmark commands require a bookmark ID");
+  if (msg->HasKey("title") && command != "renameBookmark")
+    return fail("Unexpected title");
+  if (command == "renameBookmark" &&
+      (keys.size() != 4 || msg->GetType("title") != VTYPE_STRING))
+    return fail("Bookmark rename requires only a bookmark ID and title");
   const auto id = msg->HasKey("tabId") ? static_cast<uint64_t>(msg->GetInt("tabId"))
                                        : owner_.state.active_tab();
   auto it = owner_.browsers.find(id);
@@ -871,6 +876,11 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   } else if (command == "removeBookmark") {
     if (!owner_.state.remove_bookmark(static_cast<uint64_t>(msg->GetInt("bookmarkId"))))
       return fail("Bookmark could not be removed");
+  } else if (command == "renameBookmark") {
+    if (!owner_.state.rename_bookmark(
+            static_cast<uint64_t>(msg->GetInt("bookmarkId")),
+            msg->GetString("title").ToString()))
+      return fail("Bookmark missing or title blank/longer than 256 UTF-8 bytes");
   } else {
     const auto& open_tabs = owner_.state.tabs();
     if (it == owner_.browsers.end() || std::none_of(open_tabs.begin(), open_tabs.end(),

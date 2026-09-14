@@ -26,7 +26,7 @@ Define argument/result types and limits; add native validation and controller te
 
 The shell URL is exactly `opengod://shell/index.html`. Requests are JSON objects with required `version: 1` and `command`, optional integer `tabId`, optional string `url`, command-specific `muted`, `volume` or `bookmarkId`. Unknown fields are rejected. Nonpositive IDs, persistent queries and requests over 16,384 characters are rejected. No response stream is opened.
 
-Supported command names are `state`, `createTab`, `activateTab`, `closeTab`, `duplicateTab`, `reopenTab`, `navigate`, `back`, `forward`, `reload` `devtools`, `minimizeWindow`, `toggleMaximize`, `closeWindow`, `setTabMuted`, `setTabVolume`, `addBookmark` and `removeBookmark`. Omitting `tabId` targets the active tab for tab operations. `createTab` defaults to `opengod://newtab`; `navigate` requires `url`. CEF message-router success returns the snapshot JSON; failure returns an error code/message.
+Supported command names are `state`, `createTab`, `activateTab`, `closeTab`, `duplicateTab`, `reopenTab`, `navigate`, `back`, `forward`, `reload` `devtools`, `minimizeWindow`, `toggleMaximize`, `closeWindow`, `setTabMuted`, `setTabVolume`, `addBookmark`, `removeBookmark` and `renameBookmark`. Omitting `tabId` targets the active tab for tab operations. `createTab` defaults to `opengod://newtab`; `navigate` requires `url`. CEF message-router success returns the snapshot JSON; failure returns an error code/message.
 
 Snapshots contain `version`, `activeTab`, `tabs` and `bookmarks`; each tab contains `id`, `url`, `title`, `active`, boolean `muted` and integer `volume` (0–100), with optional string `audioError`. Each bookmark contains `id`, `title` and `url`. Frontend validation checks identity uniqueness and active-tab consistency. The native wire currently uses CEF integer IDs even though the core uses 64-bit identities; expanding the ID range requires an explicit protocol update.
 ## Per-tab audio and window frame
@@ -38,6 +38,8 @@ New and duplicated tabs start unmuted at 100. Mute changes effective output gain
 Snapshots additionally contain `window: {maximized: boolean}`. Window buttons send the three window commands above. Dragging uses CEF draggable regions and Win32 nonclient hit testing, not IPC. Only the trusted shell main frame may register draggable regions.
 
 ## Bookmarks
+
+`renameBookmark` requires exactly `{version: 1, command: "renameBookmark", bookmarkId: positive integer, title: string}`. Extra fields, missing arguments and incorrect types fail before mutation. The core rejects unknown IDs, titles exceeding 256 UTF-8 bytes and titles containing only ASCII spaces, tabs or line breaks. Accepted titles are stored as supplied, preserving the URL and ID, even after the source tab closes. Failure leaves the collection unchanged; success returns the usual snapshot. The inline editor saves on Enter/Save, cancels on Escape/Cancel and retains the draft after failure. Bookmarks remain session-only.
 
 The shell renders a bookmark bar below the navigation row. `addBookmark` copies the target tab's URL and title (`tabId` optional; defaults to the active tab). Internal `opengod://` pages, terminal tabs and unknown tabs are rejected. Adding an already-saved URL is idempotent and returns the existing bookmark without creating a duplicate. `removeBookmark` requires a positive integer `bookmarkId`; unknown identifiers fail without changing state. Clicking a bookmark navigates the active tab through the existing `navigate` command.
 

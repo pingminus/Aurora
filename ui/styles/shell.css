@@ -68,3 +68,8 @@ kbd { font-family: inherit; font-size: 10px; color: var(--muted); white-space: n
 .tab-mute[hidden], .tab-volume[hidden] { display: none; }
 
 .opengod-mark { display: block; width: 26px; height: 26px; flex-shrink: 0; }
+.bookmark-edit, .bookmark-editor button { height: 22px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 11px; }
+.bookmark-editor { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.bookmark-editor input { width: 160px; min-width: 0; height: 22px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 12px; }
+.bookmark-editor [role="status"] { font-size: 11px; color: var(--text); white-space: nowrap; }
+.bookmark-editor button:disabled { opacity: .6; cursor: wait; }

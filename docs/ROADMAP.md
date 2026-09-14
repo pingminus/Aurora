@@ -29,3 +29,7 @@ Implemented native per-tab mute/volume, accessible shell controls and custom tit
 ## Product identity — 2026-09-14
 
 OpenGod naming and the new vector/Windows logo are implemented across the native host, trusted routes, shell, packaging and project documentation. Core/UI checks, native Release compilation, packaged launch and MDN rendering pass. Persistent settings use the new product namespace; automatic migration from previous branding is outside this change.
+
+## Bookmark rename
+
+The bookmark bar supports editing titles with Save/Enter and Cancel/Escape. Renaming preserves bookmark identity and URL, works independently of source-tab lifetime, and rejects invalid titles without changing state. Core and bridge regression checks cover rename behavior and native rejection recovery. Persistence remains a later milestone.

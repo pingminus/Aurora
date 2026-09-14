@@ -1,8 +1,8 @@
 export type Command = 'state' | 'createTab' | 'closeTab' | 'activateTab' | 'navigate' |
   'back' | 'forward' | 'reload' | 'duplicateTab' | 'reopenTab' | 'devtools' |
   'minimizeWindow' | 'toggleMaximize' | 'closeWindow' | 'setTabMuted' | 'setTabVolume' |
-  'addBookmark' | 'removeBookmark';
-export interface Request { version: 1; command: Command; tabId?: number; url?: string; muted?: boolean; volume?: number; bookmarkId?: number }
+  'addBookmark' | 'removeBookmark'| 'renameBookmark';
+export interface Request { version: 1; command: Command; tabId?: number; url?: string; muted?: boolean; volume?: number; bookmarkId?: number; title?: string}
 export interface Tab { id: number; url: string; title: string; active: boolean; muted: boolean; volume: number; audioError?: string; terminal?: boolean }
 export interface Bookmark { id: number; title: string; url: string }
 export interface BrowserState { version: 1; tabs: Tab[]; activeTab: number; bookmarks: Bookmark[]; window?: { maximized: boolean } }
