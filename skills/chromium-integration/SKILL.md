@@ -1,6 +1,6 @@
 ---
 name: chromium-integration
-description: Integrate or upgrade AURORA's CEF adapter, native host or Chromium dependency.
+description: Integrate or upgrade OPENGOD's CEF adapter, native host or Chromium dependency.
 ---
 
 # chromium-integration

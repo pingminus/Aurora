@@ -12,7 +12,7 @@ No production performance baseline is claimed yet. Measurements from standalone 
 | IPC | Request to validated response | Payload size and concurrency recorded |
 | Storage | Commit/search/recovery time | Once durable storage exists |
 
-Benchmark utilities belong under `tools/benchmarks/`. Record OS, hardware, compiler/configuration, CEF revision, dataset, run count and raw samples. Prefer medians and tail percentiles over a single best run. Use a fixed local fixture to separate AURORA overhead from internet variability. Do not log real browsing data in benchmark artifacts.
+Benchmark utilities belong under `tools/benchmarks/`. Record OS, hardware, compiler/configuration, CEF revision, dataset, run count and raw samples. Prefer medians and tail percentiles over a single best run. Use a fixed local fixture to separate OPENGOD overhead from internet variability. Do not log real browsing data in benchmark artifacts.
 
 Investigate regressions with traces before optimizing. Likely pressure points include excessive snapshot polling, offscreen tab activity, too many composited glass layers, blocking file access and native resize churn. Keep hidden-tab policy explicit and verify that throttling or suspension does not break audio, forms or tab recovery.
 

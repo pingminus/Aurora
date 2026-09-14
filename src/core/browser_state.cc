@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace aurora {
+namespace opengod {
 Tab* BrowserState::find(std::uint64_t id) {
   const auto it =
       std::find_if(tabs_.begin(), tabs_.end(), [id](const Tab& t) { return t.id == id; });
@@ -24,7 +24,7 @@ std::uint64_t BrowserState::create_tab(std::string input) {
 
 std::uint64_t BrowserState::create_terminal() {
  const auto id=create_tab();auto* tab=find(id);if(!tab)return 0;
- tab->terminal=true;tab->url="aurora://terminal/";tab->title="Terminal";return id;
+ tab->terminal=true;tab->url="opengod://terminal/";tab->title="Terminal";return id;
 }
 void BrowserState::select_workspace_fallback() {
   const auto it = std::find_if(tabs_.begin(), tabs_.end(), [this](const Tab& t) {
@@ -68,7 +68,7 @@ bool BrowserState::navigate(std::uint64_t id, std::string input) {
   auto* tab = find(id);
   if (!tab)
     return false;
-  if (tab->terminal) return input == "aurora://terminal/";
+  if (tab->terminal) return input == "opengod://terminal/";
   auto target = resolve_navigation(input);
   last_error_ = target.error;
   if (!target.allowed)
@@ -136,7 +136,7 @@ bool BrowserState::set_title(std::uint64_t id, std::string title) {
 }
 std::uint64_t BrowserState::add_bookmark(std::uint64_t tab_id) {
   const auto* tab = find(tab_id);
-  if (!tab || tab->terminal || tab->url.empty() || tab->url.starts_with("aurora://"))
+  if (!tab || tab->terminal || tab->url.empty() || tab->url.starts_with("opengod://"))
     return 0;
   const auto existing =
       std::find_if(bookmarks_.begin(), bookmarks_.end(),
@@ -213,4 +213,4 @@ bool BrowserState::remove_macro(std::uint64_t macro_id) {
   macros_.erase(it);
   return true;
 }
-}  // namespace aurora
+}  // namespace opengod

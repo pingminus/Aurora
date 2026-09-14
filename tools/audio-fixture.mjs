@@ -6,7 +6,7 @@ const page = (name, frequency) => `<!doctype html><html lang="en"><meta charset=
 <title>Audio ${name} — ${frequency} Hz</title>
 <style>body{font:20px system-ui;background:#111c20;color:#eef7f5;padding:60px}button{font:inherit;padding:18px;margin:10px}p{max-width:700px}code{color:#a9dcc9}</style>
 <h1>Audio tab ${name} · ${frequency} Hz</h1>
-<p>This local test page produces a quiet continuous tone. Open A and B in separate tabs, start both, then use Aurora's tab controls. The other tone must remain unchanged.</p>
+<p>This local test page produces a quiet continuous tone. Open A and B in separate tabs, start both, then use OpenGod's tab controls. The other tone must remain unchanged.</p>
 <button id="start">Play ${frequency} Hz tone</button><button id="stop">Stop tone</button>
 <p id="state" role="status">Stopped</p><a href="/tone-${name === 'A' ? 'b' : 'a'}">Other fixture</a>
 <script>

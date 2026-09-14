@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace aurora {
+namespace opengod {
 
 struct Tab {
   std::uint64_t id = 0;
@@ -39,7 +39,7 @@ struct Macro {
 // IDs are monotonic and never recycled, including restored/duplicated tabs.
 class BrowserState {
  public:
-  [[nodiscard]] std::uint64_t create_tab(std::string input = "aurora://newtab");
+  [[nodiscard]] std::uint64_t create_tab(std::string input = "opengod://newtab");
   [[nodiscard]] std::uint64_t create_terminal();
   bool close_tab(std::uint64_t id);
   bool activate_tab(std::uint64_t id);
@@ -86,4 +86,4 @@ class BrowserState {
   std::string last_error_;
 };
 
-}  // namespace aurora
+}  // namespace opengod

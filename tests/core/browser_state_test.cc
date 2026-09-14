@@ -19,24 +19,24 @@ void check(bool condition, const char* expression, int line) {
 #define CHECK(value) check(static_cast<bool>(value), #value, __LINE__)
 
 void navigation_policy() {
-  using aurora::resolve_navigation;
-  CHECK(resolve_navigation("").url == "aurora://newtab");
+  using opengod::resolve_navigation;
+  CHECK(resolve_navigation("").url == "opengod://newtab");
   CHECK(resolve_navigation("  example.com/path  ").url == "https://example.com/path");
   CHECK(resolve_navigation("HTTP://example.com").url == "http://example.com");
   CHECK(resolve_navigation("localhost:8080").url == "https://localhost:8080");
   CHECK(resolve_navigation("example.com:8443/path").allowed);
   CHECK(resolve_navigation("[::1]:8080").allowed);
   CHECK(resolve_navigation("about:blank").allowed);
-  CHECK(!resolve_navigation("aurora://settings").allowed);
-  CHECK(resolve_navigation("aurora://newtab/").allowed);
-  CHECK(resolve_navigation("aurora://newtab/newtab.html").allowed);
-  CHECK(!resolve_navigation("aurora://newtab/../shell").allowed);
+  CHECK(!resolve_navigation("opengod://settings").allowed);
+  CHECK(resolve_navigation("opengod://newtab/").allowed);
+  CHECK(resolve_navigation("opengod://newtab/newtab.html").allowed);
+  CHECK(!resolve_navigation("opengod://newtab/../shell").allowed);
   const auto search = resolve_navigation("C++ browser & tabs");
   CHECK(search.allowed && search.is_search);
   CHECK(search.url == "https://duckduckgo.com/?q=C%2B%2B%20browser%20%26%20tabs");
   for (const auto* url :
        {"javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,hi", "file:///etc/passwd",
-        "chrome://flags", "aurora://unknown", "https://user:pass@example.com", "https://",
+        "chrome://flags", "opengod://unknown", "https://user:pass@example.com", "https://",
         "https://exa mple.com", "https://%65xample.com", "https:\\evil.test",
         "https://good.test\n.evil.test"}) {
     CHECK(!resolve_navigation(url).allowed);
@@ -46,7 +46,7 @@ void navigation_policy() {
 }
 
 void lifecycle() {
-  aurora::BrowserState state;
+  opengod::BrowserState state;
   CHECK(state.tabs().empty() && state.active_tab() == 0);
   CHECK(state.reopen_closed_tab() == 0);
   const auto first = state.create_tab("example.com");
@@ -80,7 +80,7 @@ void lifecycle() {
 }
 
 void workspaces() {
-  aurora::BrowserState state;
+  opengod::BrowserState state;
   const auto first = state.create_tab();
   const auto work = state.create_workspace("Work");
   CHECK(work > 1 && state.create_workspace("") == 0);
@@ -99,7 +99,7 @@ void workspaces() {
 }
 
 void closed_tab_limit() {
-  aurora::BrowserState state;
+  opengod::BrowserState state;
   for (int i = 0; i < 40; ++i)
     CHECK(state.close_tab(state.create_tab()));
   int count = 0;
@@ -109,7 +109,7 @@ void closed_tab_limit() {
 }
 
 void bookmarks() {
-  aurora::BrowserState state;
+  opengod::BrowserState state;
   const auto tab = state.create_tab("https://example.com");
   CHECK(state.set_title(tab, "Example"));
   const auto saved = state.add_bookmark(tab);
@@ -131,13 +131,13 @@ void bookmarks() {
   CHECK(state.close_tab(tab) && state.bookmarks().size() == 1);
   CHECK(state.add_bookmark(tab) == 0);
   // Internal pages and terminals are not bookmarked.
-  const auto newtab = state.create_tab("aurora://newtab");
+  const auto newtab = state.create_tab("opengod://newtab");
   CHECK(state.add_bookmark(newtab) == 0 && state.add_bookmark(other + 999) == 0);
   CHECK(state.bookmarks().size() == 1);
 }
 
 void randomized_state_invariants() {
-  aurora::BrowserState state;
+  opengod::BrowserState state;
   const auto workspace = state.create_workspace("Work");
   std::mt19937 random(2026);
   for (int i = 0; i < 5000; ++i) {
@@ -195,17 +195,17 @@ void randomized_state_invariants() {
     std::set<std::uint64_t> mark_ids;
     for (const auto& mark : state.bookmarks()) {
       CHECK(mark.id != 0 && mark_ids.insert(mark.id).second);
-      CHECK(!mark.url.empty() && mark.url.starts_with("aurora://") == false);
+      CHECK(!mark.url.empty() && mark.url.starts_with("opengod://") == false);
     }
   }
 }
 }  // namespace
 
 int main() {
-  { aurora::BrowserState state;const auto id=state.create_terminal();CHECK(id!=0&&state.tabs().back().terminal);CHECK(!state.navigate(id,"https://example.com"));CHECK(state.duplicate_tab(id)==0);CHECK(state.close_tab(id));CHECK(state.reopen_closed_tab()==0);CHECK(state.create_tab("aurora://terminal/")==0); }
+  { opengod::BrowserState state;const auto id=state.create_terminal();CHECK(id!=0&&state.tabs().back().terminal);CHECK(!state.navigate(id,"https://example.com"));CHECK(state.duplicate_tab(id)==0);CHECK(state.close_tab(id));CHECK(state.reopen_closed_tab()==0);CHECK(state.create_tab("opengod://terminal/")==0); }
 
   {
-    aurora::BrowserState audio;
+    opengod::BrowserState audio;
     const auto a = audio.create_tab("https://example.com");
     const auto b = audio.create_tab("https://example.org");
     CHECK(audio.tabs()[0].volume == 100 && !audio.tabs()[0].muted);

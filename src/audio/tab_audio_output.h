@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-namespace aurora {
+namespace opengod {
 
 // One captured CEF browser stream, played through the default Windows device.
 // Calls are thread-safe; start/stop are asynchronous. The owner must prevent
@@ -34,4 +34,4 @@ class TabAudioOutput {
   std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace aurora
+}  // namespace opengod

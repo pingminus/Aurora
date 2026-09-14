@@ -26,11 +26,13 @@ Renderer crash recovery, corrupted persisted data, restart restoration, profile 
 
 Report four separate outcomes: core verification, UI verification, native compilation and native runtime verification. A failure or untested layer stays visible in the implementation report.
 
+The website-session toggle needs a native restart check: verify a new install reads off and uses an in-memory profile; changing it shows a restart notice; reopening OpenGod applies the saved choice and retains both a session cookie and a cookie with explicit expiry; changing it off again returns to in-memory storage after restart. Confirm that old persistent profile data remains on disk but is not used while off. Malformed preference commands and a failed preference write must leave the UI/native choice unchanged. These checks cannot be established by a standalone UI page.
+
 ## Verification record — 2026-09-10
 
 The native Windows Release build, core CTest suite and six UI tests pass. The application launched using the CEF sandbox bootstrap. Visual native checks at 1360 × 900 confirmed the new-tab page, navigation via its MDN quick link to `https://developer.mozilla.org/en-US/`, actual website rendering and synchronized native tab title. Creating another tab, switching back to the preserved MDN page and closing the background tab succeeded.
 
-A keyboard defect remains under investigation: Ctrl+L reaches the hidden CEF omnibox rather than the AURORA address bar. Keyboard acceptance is therefore not passed. Adversarial bridge requests from real web content/subframes have not yet been exercised. Stress/crash handling, clean shutdown under load, remaining policy scenarios and accessibility gates also need their dedicated checks; the first-browser milestone remains open.
+A keyboard defect remains under investigation: Ctrl+L reaches the hidden CEF omnibox rather than the OPENGOD address bar. Keyboard acceptance is therefore not passed. Adversarial bridge requests from real web content/subframes have not yet been exercised. Stress/crash handling, clean shutdown under load, remaining policy scenarios and accessibility gates also need their dedicated checks; the first-browser milestone remains open.
 
 ## Audio/frame verification update — 2026-09-12
 
@@ -42,15 +44,19 @@ Final checks: the documented `build/browser` Release package rebuilt successfull
 
 ## NVD timeout fix — 2026-09-12
 
-Replaced CEF request-wrapper address comparisons with a dedicated per-request callback client and generation validation. The native Release package loaded 3,639 live NVD records for September 7 through September 12 after eight pages, completing at 15:57:54 UTC from a 15:56:59 UTC start. The actual Aurora accessibility tree reported complete results and ascending initial scores 0.9, 1.0, 1.1, 1.1, 1.2. Both standalone core CTest suites, packaged core CTest suites, UI typecheck and all twelve UI tests pass. The native build passed. This verifies successful real callbacks and pagination; forced late-callback/timeout fault injection and complete malformed-native-IPC coverage remain open.
+Replaced CEF request-wrapper address comparisons with a dedicated per-request callback client and generation validation. The native Release package loaded 3,639 live NVD records for September 7 through September 12 after eight pages, completing at 15:57:54 UTC from a 15:56:59 UTC start. The actual OpenGod accessibility tree reported complete results and ascending initial scores 0.9, 1.0, 1.1, 1.1, 1.2. Both standalone core CTest suites, packaged core CTest suites, UI typecheck and all twelve UI tests pass. The native build passed. This verifies successful real callbacks and pagination; forced late-callback/timeout fault injection and complete malformed-native-IPC coverage remain open.
 
 The populated CVE cards also passed an actual window scroll check. The in-page feed shortcut uses scrollIntoView without a fragment navigation, preserving the exact URL required by the read-only bridge.
 
 ## Daily feed verification — 2026-09-12
-Changed the feed to midnight UTC through now, with previous-day cache invalidation. Core regression checks cover midnight exclusion/inclusion, future records and next-day invalidation. Both standalone CTest suites and all twelve UI tests pass; the native Release build passes. Actual packaged Aurora loaded 80 CVEs with request interval ending 16:07:25 UTC and successful completion at 16:07:26 UTC (approximately one second for this run). Its first scores were 10.0, 9.9, 9.8. This measurement is a single live run, not a guaranteed response time. It supersedes weekly scope and ascending-order descriptions in earlier historical verification entries.
+Changed the feed to midnight UTC through now, with previous-day cache invalidation. Core regression checks cover midnight exclusion/inclusion, future records and next-day invalidation. Both standalone CTest suites and all twelve UI tests pass; the native Release build passes. Actual packaged OpenGod loaded 80 CVEs with request interval ending 16:07:25 UTC and successful completion at 16:07:26 UTC (approximately one second for this run). Its first scores were 10.0, 9.9, 9.8. This measurement is a single live run, not a guaranteed response time. It supersedes weekly scope and ascending-order descriptions in earlier historical verification entries.
 
 ## New-tab address focus — 2026-09-13
 
 Implemented native shell focus plus a tab-ID-scoped presentation event on new browsing views. Terminal views are excluded. Verify packaged behavior with the plus button, Ctrl+T from web content, rapid tab creation/switching, and Open terminal; typing should enter the address on browsing tabs and the shell on terminal tabs. Clicking the starting-page search must still work.
 
 Typecheck and all 15 UI tests passed. Rebuilt core and both CTest suites passed; the native Release package linked and launched. A plus-button new tab displayed the address caret and text in the address field without a click there. The controlled input check was interrupted by concurrent user input, so Ctrl+T from web content, rapid switching, terminal focus, and starting-page search still need dedicated packaged verification.
+
+## OpenGod rename verification — 2026-09-14
+
+Core: both standalone CTest suites and both packaged CTest suites passed. UI: npm ci, typecheck and all 17 tests passed. Native: Release compilation and executable icon packaging passed with the installed Windows SDK. Packaged launch: opengod.exe launched through the sandbox bootstrap and displayed the new shell/home-page branding at 1360 by 900. Real website rendering: the MDN quick link loaded MDN with the correct native tab title and address. No case-insensitive previous-brand references remain in first-party source, tests, documentation or generated UI assets; the checkout directory and historical generated cache paths remain unchanged. Old named build targets and binaries were removed. Light-theme and high-contrast visual checks, full lifecycle stress, and saved-session migration were not verified; migration is intentionally not implemented.

@@ -3,7 +3,7 @@
 #include "include/cef_task.h"
 #include <functional>
 #include <cmath>
-namespace aurora {
+namespace opengod {
 namespace {
 // CEF constructs a fresh C++ request wrapper for callbacks. Identity is the
 // generation captured by this dedicated client, never a wrapper address.

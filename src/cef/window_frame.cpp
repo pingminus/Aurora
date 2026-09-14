@@ -2,7 +2,7 @@
 #include <commctrl.h>
 #include <windowsx.h>
 #include <algorithm>
-namespace aurora {
+namespace opengod {
 int frame_inset(HWND window) {
   return IsZoomed(window) ? 0 : MulDiv(5, static_cast<int>(GetDpiForWindow(window)), 96);
 }
@@ -93,4 +93,4 @@ void set_drag_regions(HWND root, HWND shell, const std::vector<RECT>& regions) {
   EnumChildWindows(shell, install_drag, reinterpret_cast<LPARAM>(combined));
   DeleteObject(combined);
 }
-}  // namespace aurora
+}  // namespace opengod

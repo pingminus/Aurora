@@ -2,7 +2,7 @@
 #include <windows.h>
 #include <optional>
 #include <string>
-namespace aurora {
+namespace opengod {
 // Only called after terminal-frame authorization and explicit UI clipboard actions.
 inline std::optional<std::wstring> terminal_clipboard(HWND window,const std::optional<std::wstring>& write) {
  if(GetForegroundWindow()!=window||!OpenClipboard(window))return {};

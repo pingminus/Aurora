@@ -6,7 +6,7 @@
 #include <thread>
 #include <vector>
 #include <filesystem>
-namespace aurora::terminal {
+namespace opengod::terminal {
 namespace {
 class Handle {
  public:
@@ -50,7 +50,7 @@ void Session::run(std::shared_ptr<State> s,const Options& options){
  if(options.initial_command.size()>256){fail("Terminal command too long.");return;}
  Handle token; if(!OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&token.value)){fail("Cannot verify shell privileges.");return;}
  TOKEN_ELEVATION elevation{};DWORD returned=0;
- if(!GetTokenInformation(token.value,TokenElevation,&elevation,sizeof(elevation),&returned)||elevation.TokenIsElevated){fail("Terminal requires Aurora to run without administrator privileges.");return;}
+ if(!GetTokenInformation(token.value,TokenElevation,&elevation,sizeof(elevation),&returned)||elevation.TokenIsElevated){fail("Terminal requires OpenGod to run without administrator privileges.");return;}
  wchar_t system[MAX_PATH]{};if(!GetSystemDirectoryW(system,MAX_PATH)){fail("Cannot locate Windows shell.");return;}
  const bool force_cmd=options.test_cmd||!options.initial_command.empty();
  std::filesystem::path shell=std::filesystem::path(system)/(force_cmd?L"cmd.exe":L"WindowsPowerShell/v1.0/powershell.exe");

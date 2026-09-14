@@ -1,5 +1,5 @@
 #include "tab_audio.h"
-namespace aurora {
+namespace opengod {
 void TabAudio::set_settings(bool muted, int volume) {
   std::lock_guard lock(mutex_);
   if (!closed_)
@@ -46,4 +46,4 @@ void TabAudio::OnAudioStreamError(CefRefPtr<CefBrowser>, const CefString&) {
   capture_error_ = "Tab audio capture failed. Reload to retry.";
   output_.stop();
 }
-}  // namespace aurora
+}  // namespace opengod

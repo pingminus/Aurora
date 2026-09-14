@@ -14,7 +14,7 @@
 #include <thread>
 #include <vector>
 
-namespace aurora {
+namespace opengod {
 namespace {
 constexpr std::size_t kMaxPendingPackets = 12;
 constexpr std::size_t kMaxDevicePackets = 3;
@@ -342,4 +342,4 @@ std::uint64_t TabAudioOutput::completed_frames() const {
   return impl_->completed.load();
 }
 
-}  // namespace aurora
+}  // namespace opengod

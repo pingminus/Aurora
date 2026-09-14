@@ -1,6 +1,6 @@
 ---
 name: typescript-ui
-description: Build AURORA shell components or typed frontend state synchronization.
+description: Build OPENGOD shell components or typed frontend state synchronization.
 ---
 
 # typescript-ui

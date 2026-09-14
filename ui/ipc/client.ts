@@ -21,7 +21,7 @@ export class NativeClient {
   private send(request: Request): Promise<BrowserState> {
     return new Promise((resolve, reject) => {
       if (!window.cefQuery) {
-        reject(new Error('Native connection unavailable. Launch Aurora to browse.'));
+        reject(new Error('Native connection unavailable. Launch OpenGod to browse.'));
         return;
       }
       let id: number | undefined;

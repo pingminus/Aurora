@@ -6,7 +6,7 @@
 #include "../../src/audio/tab_audio_output.h"
 using namespace std::chrono_literals;
 int main() {
-  aurora::TabAudioOutput out;
+  opengod::TabAudioOutput out;
   out.start(48000, 8);
   if (out.error().empty() || out.ready())
     return 1;

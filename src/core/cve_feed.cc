@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <tuple>
-namespace aurora::cve {
+namespace opengod::cve {
 std::optional<Time> parse_time(const std::string& s) {
   if (s.size() < 19 || s.size() > 24 || s[4]!='-' || s[7]!='-' || s[10]!='T' || s[13]!=':' || s[16]!=':') return {};
   for (int i : {0,1,2,3,5,6,8,9,11,12,14,15,17,18}) if (s[i]<'0'||s[i]>'9') return {};

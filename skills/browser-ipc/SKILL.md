@@ -1,6 +1,6 @@
 ---
 name: browser-ipc
-description: Add or modify commands crossing AURORA's TypeScript-to-C++ trust boundary.
+description: Add or modify commands crossing OPENGOD's TypeScript-to-C++ trust boundary.
 ---
 
 # browser-ipc

@@ -1,6 +1,6 @@
 ---
 name: accessibility
-description: Implement or verify AURORA keyboard, focus, screen-reader, contrast or motion accessibility.
+description: Implement or verify OPENGOD keyboard, focus, screen-reader, contrast or motion accessibility.
 ---
 
 # accessibility

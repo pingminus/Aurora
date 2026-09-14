@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review AURORA changes for actionable correctness, security and product behavior issues.
+description: Review OPENGOD changes for actionable correctness, security and product behavior issues.
 ---
 
 # code-review

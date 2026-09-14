@@ -1,6 +1,6 @@
 ---
 name: liquid-glass-ui
-description: Change AURORA's glass design tokens, icons, responsive surfaces or motion.
+description: Change OPENGOD's glass design tokens, icons, responsive surfaces or motion.
 ---
 
 # liquid-glass-ui

@@ -1,4 +1,4 @@
-# AURORA engineering constitution
+# OPENGOD engineering constitution
 
 ## Architecture and ownership
 
@@ -8,7 +8,7 @@ Chromium provides Blink, V8, the network stack, compositing and sandboxing throu
 
 ## Build and verification
 
-See `docs/BUILD.md` for prerequisites and complete commands. The standalone sequence is `cmake -S . -B build/core`, `cmake --build build/core --config Release`, then `ctest --test-dir build/core -C Release --output-on-failure`. Native builds opt in using `AURORA_BUILD_BROWSER=ON` and `CEF_ROOT`. UI build/typecheck commands live in the root `package.json`; execute the existing scripts rather than inventing commands. Report separately: core tests, UI checks, native compilation, real website rendering and packaged launch.
+See `docs/BUILD.md` for prerequisites and complete commands. The standalone sequence is `cmake -S . -B build/core`, `cmake --build build/core --config Release`, then `ctest --test-dir build/core -C Release --output-on-failure`. Native builds opt in using `OPENGOD_BUILD_BROWSER=ON` and `CEF_ROOT`. UI build/typecheck commands live in the root `package.json`; execute the existing scripts rather than inventing commands. Report separately: core tests, UI checks, native compilation, real website rendering and packaged launch.
 
 ## Coding conventions
 

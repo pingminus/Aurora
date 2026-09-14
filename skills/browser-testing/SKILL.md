@@ -1,6 +1,6 @@
 ---
 name: browser-testing
-description: Add or execute AURORA core, UI or native integration verification.
+description: Add or execute OPENGOD core, UI or native integration verification.
 ---
 
 # browser-testing

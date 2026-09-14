@@ -1,6 +1,6 @@
 # Interface system
 
-AURORA uses restrained translucent surfaces, a quiet ambient background, generous spacing and a coherent vector icon family. The shell must remain readable with no website open and when transparency, motion or high-performance GPU effects are unavailable.
+OPENGOD uses restrained translucent surfaces, a quiet ambient background, generous spacing and a coherent vector icon family. The shell must remain readable with no website open and when transparency, motion or high-performance GPU effects are unavailable.
 
 Tokens cover background/foreground, accents, surface opacity, blur, borders, shadows, radii, spacing, typography, duration and easing. Theme changes modify tokens rather than component-local colors. Light, dark and system themes must share semantic structure. Use opaque fallbacks and sufficient contrast; blur cannot substitute for a readable background.
 
@@ -17,3 +17,7 @@ Animate transform and opacity for short transitions; constrain blur and avoid co
 ## Accessibility
 
 Use semantic buttons and labels, visible focus, logical tab order and explicit selected-tab state. Palette/menu dismissal restores focus to the invoking control. Ensure sufficient target sizes, zoom-friendly dimensions, high-contrast support and keyboard reachability. Check with Windows screen-reader tooling in the native application; a browser preview alone does not cover native child-window focus behavior.
+
+## OpenGod identity
+
+Use icons/opengod.svg for the shell, starting page, footer and favicon. Its open-ring G and star sit on an opaque dark tile, remaining legible in both themes. The Windows icon includes 16 through 256 pixel sizes. Rebuild it with tools/build-icon.ps1 after geometry changes. The native DLL supplies the window icon; tools/set-package-icon.ps1 brands the packaged executable. The obsolete screenshot was removed from the README.

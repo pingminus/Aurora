@@ -3,7 +3,7 @@
 #include <sstream>
 #include "include/cef_parser.h"
 #include "include/wrapper/cef_stream_resource_handler.h"
-namespace aurora {
+namespace opengod {
 namespace {
 class Resources final : public CefSchemeHandlerFactory {
  public:
@@ -56,8 +56,8 @@ class Resources final : public CefSchemeHandlerFactory {
 };
 }  // namespace
 void register_resources(const std::filesystem::path& directory) {
-  CefRegisterSchemeHandlerFactory("aurora", "shell", new Resources(directory));
-  CefRegisterSchemeHandlerFactory("aurora", "newtab", new Resources(directory));
-  CefRegisterSchemeHandlerFactory("aurora", "terminal", new Resources(directory));
+  CefRegisterSchemeHandlerFactory("opengod", "shell", new Resources(directory));
+  CefRegisterSchemeHandlerFactory("opengod", "newtab", new Resources(directory));
+  CefRegisterSchemeHandlerFactory("opengod", "terminal", new Resources(directory));
 }
-}  // namespace aurora
+}  // namespace opengod

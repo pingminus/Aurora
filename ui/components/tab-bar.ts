@@ -49,7 +49,7 @@ export class TabBar {
         this.nodes.set(tab.id, node); this.root.append(node);
       }
       const select = node.querySelector<HTMLButtonElement>('.tab-select')!;
-      const title = tab.title || (/^aurora:\/\/newtab\/?$/.test(tab.url) ? 'New tab' : tab.url) || 'Untitled';
+      const title = tab.title || (/^opengod:\/\/newtab\/?$/.test(tab.url) ? 'New tab' : tab.url) || 'Untitled';
       select.querySelector('span')!.textContent = title;
       select.title = title; select.setAttribute('aria-selected', String(tab.active));
       select.tabIndex = tab.active ? 0 : -1;

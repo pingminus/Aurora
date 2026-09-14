@@ -1,6 +1,6 @@
 ---
 name: cpp-browser-core
-description: Implement AURORA C++ controller transitions, tab identity or native domain policy independently of CEF.
+description: Implement OPENGOD C++ controller transitions, tab identity or native domain policy independently of CEF.
 ---
 
 # cpp-browser-core

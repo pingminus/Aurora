@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-namespace aurora {
+namespace opengod {
 
 struct NavigationTarget {
   bool allowed = false;
@@ -16,4 +16,4 @@ struct NavigationTarget {
 // Call only for user-entered top-level navigation, never for subresources.
 [[nodiscard]] NavigationTarget resolve_navigation(std::string_view input);
 
-}  // namespace aurora
+}  // namespace opengod

@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-namespace aurora::terminal {
+namespace opengod::terminal {
 constexpr size_t output_limit = 256 * 1024;
 constexpr size_t input_limit = 64 * 1024;
 inline bool valid_size(int columns,int rows) { return columns>=2&&columns<=400&&rows>=1&&rows<=200; }

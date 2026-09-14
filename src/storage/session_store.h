@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace aurora::storage {
+namespace opengod::storage {
 
 struct SessionTab {
   std::string url;
@@ -42,4 +42,4 @@ class SessionStore {
   std::filesystem::path profile_directory_;
 };
 
-}  // namespace aurora::storage
+}  // namespace opengod::storage

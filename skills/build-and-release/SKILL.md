@@ -1,6 +1,6 @@
 ---
 name: build-and-release
-description: Modify AURORA dependency acquisition, CMake, Windows packaging or release verification.
+description: Modify OPENGOD dependency acquisition, CMake, Windows packaging or release verification.
 ---
 
 # build-and-release

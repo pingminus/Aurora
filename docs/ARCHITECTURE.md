@@ -6,7 +6,7 @@ The initial workspace was an empty Git repository on Windows, not a Chromium che
 
 ## Platform choice
 
-Use CEF as the Chromium integration boundary. This permits a native C++ product without maintaining a Chromium fork or downloading and building the entire source tree before the first vertical slice. CEF supplies the rendering platform, not a complete browser product: AURORA must own tabs, policies, state, storage and interface behavior. APIs requiring deeper Chromium integration must be justified individually in the decision log.
+Use CEF as the Chromium integration boundary. This permits a native C++ product without maintaining a Chromium fork or downloading and building the entire source tree before the first vertical slice. CEF supplies the rendering platform, not a complete browser product: OPENGOD must own tabs, policies, state, storage and interface behavior. APIs requiring deeper Chromium integration must be justified individually in the decision log.
 
 ```text
 TypeScript shell: components, layout, focus, animation

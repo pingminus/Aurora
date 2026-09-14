@@ -3,7 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
-namespace aurora::terminal {
+namespace opengod::terminal {
 struct Snapshot { std::string status, error, shell, bytes; uint64_t next = 0; unsigned long pid = 0; };
 // Native launch options. The initial command is trusted, internal and ASCII (a
 // known tool name); it is embedded into the shell command line before startup.

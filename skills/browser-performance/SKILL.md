@@ -1,6 +1,6 @@
 ---
 name: browser-performance
-description: Measure or investigate AURORA startup, tab, IPC, memory or rendering performance.
+description: Measure or investigate OPENGOD startup, tab, IPC, memory or rendering performance.
 ---
 
 # browser-performance

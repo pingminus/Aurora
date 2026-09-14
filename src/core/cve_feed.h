@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
-namespace aurora::cve {
+namespace opengod::cve {
 using Time = std::chrono::sys_seconds;
 std::optional<Time> parse_time(const std::string& value);
 std::string format_time(Time value);

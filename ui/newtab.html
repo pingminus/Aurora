@@ -5,10 +5,10 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action https://duckduckgo.com">
   <title>New tab</title>
   <link rel="stylesheet" href="theme/tokens.css"><link rel="stylesheet" href="styles/newtab.css">
-</head>
+  <link rel="icon" type="image/svg+xml" href="icons/opengod.svg"></head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
-  <header class="page-header"><a class="brand" href="aurora://newtab" aria-label="Aurora home">AURORA<span class="brand-dot"></span></a><span>A LITTLE SPACE TO THINK.</span></header>
+  <header class="page-header"><a class="brand" href="opengod://newtab" aria-label="OpenGod home"><img class="brand-mark" src="icons/opengod.svg" alt="" width="32" height="32">OpenGod</a><span>A LITTLE SPACE TO THINK.</span></header>
   <main>
     <div class="hero">
     <div class="eyebrow"><span></span> YOUR OPEN HORIZON</div>
@@ -21,6 +21,16 @@
     </form>
     <div class="launch-row" id="launch-row"><button type="button" class="feed-button terminal-launch" id="open-terminal">⌘ Open terminal</button><button type="button" class="feed-button terminal-launch" id="open-omniroute">↗ Open omniroute</button><button type="button" class="feed-button add-macro-btn" id="add-macro-btn">+ Add macro</button></div>
     <p id="terminal-launch-status" role="status"></p>
+    <section class="session-preference" aria-labelledby="session-preference-title">
+      <div><h2 id="session-preference-title">Save website sessions</h2><p id="session-preference-help">Keep website logins and site data after closing OpenGod. Off by default. Tabs are not restored; turning off does not erase older saved data.</p></div>
+      <button id="save-sessions" class="session-switch" type="button" role="switch" aria-checked="false" aria-describedby="session-preference-help session-preference-status" aria-label="Save website sessions" disabled><span class="session-switch-thumb" aria-hidden="true"></span></button>
+      <p id="session-preference-status" class="session-preference-status" role="status" aria-live="polite">Loading preference…</p>
+    </section>
+    <section class="session-preference" aria-labelledby="white-screen-title">
+      <div><h2 id="white-screen-title">White screen overlay</h2><p id="white-screen-help">Toggle a full-screen white overlay for testing visibility, contrast, or debugging. Does not affect browser functionality.</p></div>
+      <button id="white-screen" class="session-switch" type="button" role="switch" aria-checked="false" aria-describedby="white-screen-help white-screen-status" aria-label="White screen overlay"><span class="session-switch-thumb" aria-hidden="true"></span></button>
+      <p id="white-screen-status" class="session-preference-status" role="status" aria-live="polite">Off</p>
+    </section>
     <dialog id="macro-editor" class="macro-editor">
       <div class="macro-editor-header">
         <h2 id="macro-editor-title">New macro</h2>
@@ -74,10 +84,10 @@
       <div id="feed-status" role="status" aria-live="polite">Loading today’s CVEs…</div>
       <ol class="cve-list" id="feed-list" aria-label="CVEs ordered by descending CVSS"></ol>
       <button class="feed-button" id="feed-more" type="button" hidden>Show more CVEs</button>
-      <noscript>The CVE feed requires JavaScript in Aurora’s internal starting page.</noscript>
+      <noscript>The CVE feed requires JavaScript in OpenGod’s internal starting page.</noscript>
     </section>
   </main>
-  <footer><span class="footer-mark">A</span><span>Made for a more considered web.</span><span class="search-provider">Search with DuckDuckGo</span></footer>
+  <footer><img class="footer-mark" src="icons/opengod.svg" alt="" width="20" height="20"><span>Made for a more considered web.</span><span class="search-provider">Search with DuckDuckGo</span></footer>
   <script type="module" src="app/newtab.js"></script>
 </body>
 </html>

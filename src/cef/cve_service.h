@@ -2,7 +2,7 @@
 #include "core/cve_feed.h"
 #include "include/cef_urlrequest.h"
 #include <mutex>
-namespace aurora {
+namespace opengod {
 // Request/JSON work is confined to CEF's background thread. UI reads a published snapshot.
 class CveService final : public CefBaseRefCounted {
  public:

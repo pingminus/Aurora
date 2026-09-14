@@ -23,12 +23,36 @@
 #include "tab_audio.h"
 #include "window_frame.h"
 
-namespace aurora {
+namespace opengod {
 namespace {
-constexpr wchar_t kWindowClass[] = L"AuroraBrowserWindow";
-constexpr char kShellUrl[] = "aurora://shell/index.html";
+constexpr wchar_t kWindowClass[] = L"OpenGodBrowserWindow";
+constexpr char kShellUrl[] = "opengod://shell/index.html";
 constexpr char kOmnirouteUrl[] = "http://localhost:20128";
 constexpr char kOmnirouteCmd[] = "omniroute";
+constexpr wchar_t kPreferencesKey[] = L"Software\\OpenGod";
+constexpr wchar_t kSaveLoginSessionsValue[] = L"SaveLoginSessions";
+
+bool read_session_cookie_preference() {
+  DWORD value = 0;
+  DWORD size = sizeof(value);
+  const LONG result = RegGetValueW(HKEY_CURRENT_USER, kPreferencesKey,
+                                   kSaveLoginSessionsValue, RRF_RT_REG_DWORD,
+                                   nullptr, &value, &size);
+  // Missing or malformed preferences fail closed to the off default.
+  return result == ERROR_SUCCESS && value == 1;
+}
+
+bool write_session_cookie_preference(bool enabled) {
+  HKEY key = nullptr;
+  if (RegCreateKeyExW(HKEY_CURRENT_USER, kPreferencesKey, 0, nullptr, 0,
+                      KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+    return false;
+  const DWORD value = enabled ? 1 : 0;
+  const LONG result = RegSetValueExW(key, kSaveLoginSessionsValue, 0, REG_DWORD,
+                                      reinterpret_cast<const BYTE*>(&value), sizeof(value));
+  RegCloseKey(key);
+  return result == ERROR_SUCCESS;
+}
 class Host;
 Host* host = nullptr;  // UI-thread only; lifetime encloses the CEF message loop.
 
@@ -173,6 +197,17 @@ class Host {
  public:
   HWND window = nullptr;
   BrowserState state;
+  bool session_cookies_saved = false;
+  bool session_cookies_active = false;
+  std::string session_cookie_snapshot() const {
+    auto result = CefDictionaryValue::Create();
+    result->SetInt("version", 1);
+    result->SetBool("enabled", session_cookies_saved);
+    result->SetBool("active", session_cookies_active);
+    auto value = CefValue::Create();
+    value->SetDictionary(result);
+    return CefWriteJSON(value, JSON_WRITER_DEFAULT).ToString();
+  }
   struct TerminalTab { std::shared_ptr<terminal::Session> session; uint64_t generation; };
   std::map<uint64_t,TerminalTab> terminals;
   uint64_t next_terminal_generation=1;
@@ -184,12 +219,12 @@ class Host {
     it->second.session->close();return true;
   }
   void create_terminal(const std::string& initial_command = "") {
-    if(terminals.size()>=8){MessageBoxW(window,L"Close a terminal before opening another (maximum eight).",L"Aurora",MB_OK);return;}
+    if(terminals.size()>=8){MessageBoxW(window,L"Close a terminal before opening another (maximum eight).",L"OpenGod",MB_OK);return;}
     const auto id=state.create_terminal();if(!id)return;
     terminal::Options options;
     if(!initial_command.empty()){options.initial_command=initial_command;options.test_cmd=true;}
     terminals.emplace(id,TerminalTab{std::make_shared<terminal::Session>(options),next_terminal_generation++});
-    create_view(id,"aurora://terminal/");
+    create_view(id,"opengod://terminal/");
   }
   void launch_omniroute() {
     create_terminal(kOmnirouteCmd);
@@ -271,7 +306,7 @@ class Host {
         pending_tabs.erase(id);
       if (!chrome)
         state.close_tab(id);
-      MessageBoxW(window, L"Chromium could not create a browser view.", L"Aurora", MB_ICONERROR);
+      MessageBoxW(window, L"Chromium could not create a browser view.", L"OpenGod", MB_ICONERROR);
     }
   }
   void focus_new_tab_address(uint64_t id) {
@@ -280,7 +315,7 @@ class Host {
       return;
     shell->GetHost()->SetFocus(true);
     shell->GetMainFrame()->ExecuteJavaScript(
-        "window.dispatchEvent(new CustomEvent('aurora-new-tab-address',{detail:" +
+        "window.dispatchEvent(new CustomEvent('opengod-new-tab-address',{detail:" +
             std::to_string(id) + "}))", kShellUrl, 0);
   }
   void create_tab(const std::string& url) {
@@ -360,7 +395,7 @@ class Host {
   void close() {
     if (closing) return;
     for(const auto& [id,terminal] : terminals) {
-      if(!terminal.session->finished() && MessageBoxW(window,L"Closing Aurora stops all terminal shells and child processes. Continue?",L"Close Aurora",MB_OKCANCEL|MB_ICONWARNING|MB_DEFBUTTON2)!=IDOK)return;
+      if(!terminal.session->finished() && MessageBoxW(window,L"Closing OpenGod stops all terminal shells and child processes. Continue?",L"Close OpenGod",MB_OKCANCEL|MB_ICONWARNING|MB_DEFBUTTON2)!=IDOK)return;
       if(!terminal.session->finished())break;
     }
     for(auto& [id,terminal] : terminals)terminal.session->close();
@@ -407,8 +442,8 @@ void Client::OnLoadEnd(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame> frame, int) {
   terminal_loaded_ = true;
   // Startup can create the content view before the shell document is ready.
   if (shell_) owner_.focus_new_tab_address(owner_.state.active_tab());
-  else if (first_load && !devtools_ && (frame->GetURL() == "aurora://newtab" ||
-                           frame->GetURL() == "aurora://newtab/"))
+  else if (first_load && !devtools_ && (frame->GetURL() == "opengod://newtab" ||
+                           frame->GetURL() == "opengod://newtab/"))
     owner_.focus_new_tab_address(tab_);
 }
 bool Client::OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) {
@@ -416,7 +451,7 @@ bool Client::OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) {
   const auto url = browser->GetMainFrame()->GetURL().ToString();
   // Loading the starting page must not steal focus back from the address bar.
   // User clicks and terminal focus requests retain normal CEF behavior.
-  return url == "aurora://newtab" || url == "aurora://newtab/";
+  return url == "opengod://newtab" || url == "opengod://newtab/";
 }
 void Client::stop_terminal() { if(shell_||devtools_)return; const auto it=owner_.terminals.find(tab_);if(it!=owner_.terminals.end())it->second.session->close(); }
 Client::Client(Host& owner, uint64_t tab, bool shell, bool devtools)
@@ -457,8 +492,8 @@ bool Client::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
         owner_.shell->GetHost()->SetFocus(true);
         owner_.shell->GetMainFrame()->ExecuteJavaScript(
             event.windows_key_code == 'L'
-                ? "window.dispatchEvent(new Event('aurora-focus-address'))"
-                : "window.dispatchEvent(new Event('aurora-open-commands'))",
+                ? "window.dispatchEvent(new Event('opengod-focus-address'))"
+                : "window.dispatchEvent(new Event('opengod-open-commands'))",
             kShellUrl, 0);
         return true;
       }
@@ -467,7 +502,7 @@ bool Client::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
           (void)owner_.state.reopen_closed_tab();
           owner_.synchronize();
         } else
-          owner_.create_tab("aurora://newtab");
+          owner_.create_tab("opengod://newtab");
         owner_.layout();
         return true;
       case 'W':
@@ -478,7 +513,7 @@ bool Client::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
           if (browser)
             browser->GetHost()->CloseBrowser(true);
           if (owner_.state.tabs().empty())
-            owner_.create_tab("aurora://newtab");
+            owner_.create_tab("opengod://newtab");
           owner_.layout();
         }
         return true;
@@ -514,7 +549,7 @@ bool Client::OnChromeCommand(CefRefPtr<CefBrowser> browser,
   if (devtools_ || owner_.closing)
     return false;
   // Chrome-style accelerators can run before renderer key events. Route those
-  // commands through the same Aurora actions so no hidden Chrome tab UI opens.
+  // commands through the same OpenGod actions so no hidden Chrome tab UI opens.
   struct Shortcut {
     const char* command;
     int key;
@@ -550,7 +585,7 @@ void Client::OnBeforeDevToolsPopup(CefRefPtr<CefBrowser>,
                                    CefRefPtr<CefDictionaryValue>&,
                                    bool*) {
   CEF_REQUIRE_UI_THREAD();
-  // Covers both the Aurora command and Chromium's built-in menu/shortcut.
+  // Covers both the OpenGod command and Chromium's built-in menu/shortcut.
   if (owner_.pending_devtools.insert(tab_).second)
     ++owner_.pending;
   client = new Client(owner_, tab_, false, true);
@@ -632,16 +667,16 @@ bool Client::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   if (shell_)
     return !frame->IsMain() || url != kShellUrl;
   if (owner_.terminals.contains(tab_)) {
-    if (!frame->IsMain() || url != "aurora://terminal/") return true;
+    if (!frame->IsMain() || url != "opengod://terminal/") return true;
     if (terminal_loaded_) stop_terminal();
     return false;
   }
-  if (url.starts_with("aurora://terminal")) return true;
+  if (url.starts_with("opengod://terminal")) return true;
   if (!frame->IsMain())
-    return url.starts_with("aurora:");
+    return url.starts_with("opengod:");
   const auto target = resolve_navigation(url);
-  return !target.allowed || target.url.starts_with("aurora://shell") ||
-         target.url == "aurora://settings";
+  return !target.allowed || target.url.starts_with("opengod://shell") ||
+         target.url == "opengod://settings";
 }
 bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
                      CefRefPtr<CefFrame> frame,
@@ -653,7 +688,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
   if (!shell_ && owner_.terminals.contains(tab_)) {
     const auto found=owner_.browsers.find(tab_);
     auto fail=[&](const char* message){callback->Failure(400,message);return true;};
-    if(devtools_||owner_.closing||found==owner_.browsers.end()||found->second->GetIdentifier()!=browser->GetIdentifier()||!frame->IsMain()||frame->GetURL()!="aurora://terminal/"||persistent||request.length()>32768)return fail("Unauthorized terminal request");
+    if(devtools_||owner_.closing||found==owner_.browsers.end()||found->second->GetIdentifier()!=browser->GetIdentifier()||!frame->IsMain()||frame->GetURL()!="opengod://terminal/"||persistent||request.length()>32768)return fail("Unauthorized terminal request");
     auto value=CefParseJSON(request,JSON_PARSER_RFC);auto d=value&&value->GetType()==VTYPE_DICTIONARY?value->GetDictionary():nullptr;
     if(!d||d->GetType("version")!=VTYPE_INT||d->GetInt("version")!=1||d->GetType("command")!=VTYPE_STRING)return fail("Invalid terminal envelope");
     const auto command=d->GetString("command").ToString();auto& term=owner_.terminals.at(tab_);
@@ -671,7 +706,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
       const bool copy=command=="terminalCopy";
       if(d->GetSize()!=(copy?4u:3u)||(copy&&d->GetType("data")!=VTYPE_STRING))return fail("Invalid clipboard command");
       auto text=terminal_clipboard(owner_.window,copy?std::optional<std::wstring>(d->GetString("data").ToWString()):std::nullopt);
-      if(!text)return fail("Clipboard unavailable or exceeds 32 KiB of text; focus Aurora and retry");
+      if(!text)return fail("Clipboard unavailable or exceeds 32 KiB of text; focus OpenGod and retry");
       auto out=CefDictionaryValue::Create();out->SetString("text",*text);auto response=CefValue::Create();response->SetDictionary(out);callback->Success(CefWriteJSON(response,JSON_WRITER_DEFAULT));return true;
     } else if(command=="terminalResize") {
       if(d->GetSize()!=5||d->GetType("columns")!=VTYPE_INT||d->GetType("rows")!=VTYPE_INT||!term.session->resize(d->GetInt("columns"),d->GetInt("rows")))return fail("Invalid terminal dimensions");
@@ -689,7 +724,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     const auto url = frame->GetURL().ToString();
     if (devtools_ || owner_.closing || found == owner_.browsers.end() ||
         found->second->GetIdentifier() != browser->GetIdentifier() || !frame->IsMain() ||
-        (url != "aurora://newtab/" && url != "aurora://newtab") || persistent || request.length() > 4096) {
+        (url != "opengod://newtab/" && url != "opengod://newtab") || persistent || request.length() > 4096) {
       callback->Failure(403, "Untrusted feed request"); return true;
     }
     auto value = CefParseJSON(request, JSON_PARSER_RFC);
@@ -700,6 +735,20 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     }
     const auto command = d->GetString("command").ToString();
     auto fail = [&](const char* message) { callback->Failure(400, message); return true; };
+    if (command == "sessionPersistenceState") {
+      if (d->GetSize() != 2) return fail("Invalid session preference command");
+      callback->Success(owner_.session_cookie_snapshot()); return true;
+    }
+    if (command == "setSessionPersistence") {
+      if (d->GetSize() != 3 || d->GetType("enabled") != VTYPE_BOOL)
+        return fail("Invalid session preference value");
+      const bool enabled = d->GetBool("enabled");
+      if (!write_session_cookie_preference(enabled)) {
+        callback->Failure(500, "Could not save session preference"); return true;
+      }
+      owner_.session_cookies_saved = enabled;
+      callback->Success(owner_.session_cookie_snapshot()); return true;
+    }
     if (command == "cveState" || command == "refreshCves") {
       if (d->GetSize() != 2) return fail("Invalid feed command");
       owner_.cve_feed->poll(command == "refreshCves");
@@ -810,7 +859,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
     PostMessageW(owner_.window, WM_CLOSE, 0, 0);
     return true;
   } else if (command == "createTab") {
-    const auto url = msg->HasKey("url") ? msg->GetString("url").ToString() : "aurora://newtab";
+    const auto url = msg->HasKey("url") ? msg->GetString("url").ToString() : "opengod://newtab";
     if (!resolve_navigation(url).allowed)
       return fail("Navigation denied");
     owner_.create_tab(url);
@@ -852,7 +901,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
       owner_.state.close_tab(id);
       it->second->GetHost()->CloseBrowser(true);
       if (owner_.state.tabs().empty())
-        owner_.create_tab("aurora://newtab");
+        owner_.create_tab("opengod://newtab");
     } else if (command == "duplicateTab") {
       if(owner_.terminals.contains(id))return fail("Open a new terminal instead of duplicating a session");
       (void)owner_.state.duplicate_tab(id);
@@ -873,7 +922,7 @@ bool Client::OnQuery(CefRefPtr<CefBrowser> browser,
       if (owner_.pending_devtools.contains(id))
         return fail("Developer tools are opening");
       CefWindowInfo info;
-      info.SetAsPopup(owner_.window, "Aurora Developer Tools");
+      info.SetAsPopup(owner_.window, "OpenGod Developer Tools");
       if (!it->second->GetHost()->HasDevTools() && owner_.pending_devtools.insert(id).second)
         ++owner_.pending;
       it->second->GetHost()->ShowDevTools(info, new Client(owner_, id, false, true),
@@ -916,12 +965,12 @@ class App final : public CefApp, public CefBrowserProcessHandler, public CefRend
   CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override { return this; }
   CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
   void OnRegisterCustomSchemes(CefRawPtr<CefSchemeRegistrar> registrar) override {
-    registrar->AddCustomScheme("aurora", CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE);
+    registrar->AddCustomScheme("opengod", CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE);
   }
   void OnContextInitialized() override {
     register_resources(assets_);
     host->create_view(0, kShellUrl, true);
-    host->create_tab("aurora://newtab");
+    host->create_tab("opengod://newtab");
   }
   void OnWebKitInitialized() override {
     renderer_ = CefMessageRouterRendererSide::Create(CefMessageRouterConfig{});
@@ -929,7 +978,7 @@ class App final : public CefApp, public CefBrowserProcessHandler, public CefRend
   void OnContextCreated(CefRefPtr<CefBrowser> browser,
                         CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override {
-    if (frame->IsMain() && (frame->GetURL() == kShellUrl || frame->GetURL() == "aurora://newtab/" || frame->GetURL() == "aurora://newtab" || frame->GetURL() == "aurora://terminal/"))
+    if (frame->IsMain() && (frame->GetURL() == kShellUrl || frame->GetURL() == "opengod://newtab/" || frame->GetURL() == "opengod://newtab" || frame->GetURL() == "opengod://terminal/"))
       renderer_->OnContextCreated(browser, frame, context);
   }
   void OnContextReleased(CefRefPtr<CefBrowser> browser,
@@ -951,7 +1000,7 @@ class App final : public CefApp, public CefBrowserProcessHandler, public CefRend
   IMPLEMENT_REFCOUNTING(App);
 };
 }  // namespace
-}  // namespace aurora
+}  // namespace opengod
 
 extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,
                                                 LPWSTR,
@@ -964,7 +1013,7 @@ extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,
   GetModuleFileNameW(nullptr, executable, MAX_PATH);
   const auto directory = std::filesystem::path(executable).parent_path();
   CefMainArgs args(instance);
-  CefRefPtr<aurora::App> app = new aurora::App(directory / "ui");
+  CefRefPtr<opengod::App> app = new opengod::App(directory / "ui");
   const int result = CefExecuteProcess(args, app, sandbox_info);
   if (result >= 0)
     return result;
@@ -974,17 +1023,20 @@ extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,
       command->HasSwitch("ignore-certificate-errors"))
     return 3;
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-  aurora::Host owner;
-  aurora::host = &owner;
+  opengod::Host owner;
+  owner.session_cookies_saved = opengod::read_session_cookie_preference();
+  owner.session_cookies_active = owner.session_cookies_saved;
+  opengod::host = &owner;
   WNDCLASSW wc{};
-  wc.lpfnWndProc = aurora::WindowProc;
+  wc.lpfnWndProc = opengod::WindowProc;
   wc.hInstance = instance;
-  wc.lpszClassName = aurora::kWindowClass;
+  wc.lpszClassName = opengod::kWindowClass;
   wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+  wc.hIcon = LoadIconW(GetModuleHandleW(L"opengod.dll"), MAKEINTRESOURCEW(101));
   wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
   RegisterClassW(&wc);
   owner.window = CreateWindowExW(
-      0, aurora::kWindowClass, L"Aurora",
+      0, opengod::kWindowClass, L"OpenGod",
       WS_POPUP | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
       CW_USEDEFAULT, CW_USEDEFAULT, 1360, 900, nullptr, nullptr, instance, nullptr);
   if (!owner.window)
@@ -999,15 +1051,20 @@ extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,
   if (!GetEnvironmentVariableW(L"LOCALAPPDATA", local, MAX_PATH))
     return 5;
   CefString(&settings.root_cache_path) =
-      (std::filesystem::path(local) / "Aurora" / "Profiles").wstring();
-  CefString(&settings.cache_path) =
-      (std::filesystem::path(local) / "Aurora" / "Profiles" / "Default").wstring();
+      (std::filesystem::path(local) / "OpenGod" / "Profiles").wstring();
+  // An empty cache path makes CEF use an in-memory (incognito) default profile.
+  // A saved preference uses the persistent profile and retains session cookies.
+  if (owner.session_cookies_active) {
+    CefString(&settings.cache_path) =
+        (std::filesystem::path(local) / "OpenGod" / "Profiles" / "Default").wstring();
+    settings.persist_session_cookies = true;
+  }
   if (!CefInitialize(args, settings, app, sandbox_info))
     return 6;
   SetTimer(owner.window,1,50,nullptr);
   ShowWindow(owner.window, show);
   CefRunMessageLoop();
-  aurora::host = nullptr;
+  opengod::host = nullptr;
   CefShutdown();
   return 0;
 }

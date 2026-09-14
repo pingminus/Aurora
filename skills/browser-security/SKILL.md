@@ -1,6 +1,6 @@
 ---
 name: browser-security
-description: Implement or review AURORA navigation, permission, resource or bridge security controls.
+description: Implement or review OPENGOD navigation, permission, resource or bridge security controls.
 ---
 
 # browser-security

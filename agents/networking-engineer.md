@@ -1,6 +1,6 @@
 # Networking engineer
 
-- Responsibility: Own AURORA network policy around Chromium facilities.
+- Responsibility: Own OPENGOD network policy around Chromium facilities.
 - Expertise: CEF request contexts, navigation, certificates and privacy controls.
 - Primary files: Native navigation/request policy and network documentation
 - Avoid: Replacement networking stacks or Blink behavior.

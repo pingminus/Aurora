@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cctype>
 
-namespace aurora {
+namespace opengod {
 namespace {
 bool ascii_space(unsigned char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
@@ -42,15 +42,15 @@ NavigationTarget resolve_navigation(std::string_view input) {
   while (!input.empty() && ascii_space(static_cast<unsigned char>(input.back())))
     input.remove_suffix(1);
   if (input.empty())
-    return {true, "aurora://newtab", {}, false};
+    return {true, "opengod://newtab", {}, false};
   for (unsigned char c : input) {
     if (c < 0x20 || c == 0x7f || c == '\\')
       return deny("Navigation contains forbidden characters.");
   }
   const auto lower = lowercase(input);
-  if (lower == "aurora://newtab" || lower == "aurora://newtab/" ||
-      lower == "aurora://newtab/newtab.html")
-    return {true, "aurora://newtab/", {}, false};
+  if (lower == "opengod://newtab" || lower == "opengod://newtab/" ||
+      lower == "opengod://newtab/newtab.html")
+    return {true, "opengod://newtab/", {}, false};
   if (lower == "about:blank")
     return {true, lower, {}, false};
 
@@ -90,4 +90,4 @@ NavigationTarget resolve_navigation(std::string_view input) {
   }
   return {true, "https://duckduckgo.com/?q=" + encode_query(input), {}, true};
 }
-}  // namespace aurora
+}  // namespace opengod

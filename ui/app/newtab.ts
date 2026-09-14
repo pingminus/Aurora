@@ -1,4 +1,44 @@
 import { parseFeed, type CveFeed, type CveEntry } from '../ipc/cve-protocol.js';
+import { parseSessionPersistenceState, type SessionPersistenceState } from '../ipc/session-persistence-protocol.js';
+const sessionSwitch = document.querySelector<HTMLButtonElement>('#save-sessions')!;
+const sessionStatus = document.querySelector<HTMLElement>('#session-preference-status')!;
+let sessionState: SessionPersistenceState | undefined;
+function renderSessionState(state: SessionPersistenceState): void {
+  sessionState = state;
+  sessionSwitch.setAttribute('aria-checked', String(state.enabled));
+  sessionSwitch.disabled = false;
+  sessionStatus.textContent = state.enabled !== state.active ?
+    'Preference saved. Restart OpenGod to apply this change.' :
+    state.enabled ? 'On for this window.' : 'Off for this window.';
+}
+async function requestSessionState(enabled?: boolean): Promise<void> {
+  sessionSwitch.disabled = true;
+  try {
+    const raw = await new Promise<string>((resolve, reject) => {
+      if (!window.cefQuery) { reject(new Error('Available in OpenGod only.')); return; }
+      let pending: number | undefined;
+      const timeout = window.setTimeout(() => {
+        if (pending !== undefined) window.cefQueryCancel?.(pending);
+        reject(new Error('Preference request timed out.'));
+      }, 5000);
+      try {
+        pending = window.cefQuery({request: JSON.stringify({version: 1,
+          command: enabled === undefined ? 'sessionPersistenceState' : 'setSessionPersistence',
+          ...(enabled === undefined ? {} : {enabled})}), persistent: false,
+        onSuccess: response => { clearTimeout(timeout); resolve(response); },
+        onFailure: () => { clearTimeout(timeout); reject(new Error('Could not save or load the preference.')); }});
+      } catch (error) { clearTimeout(timeout); reject(error); }
+    });
+    renderSessionState(parseSessionPersistenceState(raw));
+  } catch (error) {
+    sessionSwitch.disabled = sessionState === undefined;
+    sessionStatus.textContent = error instanceof Error ? error.message : 'Preference unavailable.';
+  }
+}
+sessionSwitch.addEventListener('click', () => {
+  if (sessionState) void requestSessionState(!sessionState.enabled);
+});
+void requestSessionState();
 const status = document.querySelector<HTMLElement>('#feed-status')!;
 const range = document.querySelector<HTMLElement>('#feed-range')!;
 const updated = document.querySelector<HTMLElement>('#feed-updated')!;
@@ -49,7 +89,7 @@ async function request(command: 'cveState' | 'refreshCves'): Promise<void> {
   if (busy || disposed) return; busy = true;
   try {
     const raw = await new Promise<string>((resolve, reject) => {
-      if (!window.cefQuery) { reject(new Error('Open this starting page in Aurora to load the CVE feed.')); return; }
+      if (!window.cefQuery) { reject(new Error('Open this starting page in OpenGod to load the CVE feed.')); return; }
       const timeout = window.setTimeout(() => { if (pendingId !== undefined) window.cefQueryCancel?.(pendingId); pendingId = undefined; reject(new Error('The native feed did not respond. Retry to reconnect.')); }, 5000);
       try { pendingId = window.cefQuery({request: JSON.stringify({version: 1, command}), persistent: false,
         onSuccess: value => { clearTimeout(timeout); pendingId = undefined; resolve(value); },
@@ -75,7 +115,7 @@ document.querySelector<HTMLAnchorElement>('.scroll-cue')?.addEventListener('clic
 const launchTerminal = document.querySelector<HTMLButtonElement>('#open-terminal')!;
 launchTerminal.addEventListener('click', () => {
   const feedback = document.querySelector<HTMLElement>('#terminal-launch-status')!;
-  if (!window.cefQuery) { feedback.textContent = 'Open this page in Aurora to launch a terminal.'; return; }
+  if (!window.cefQuery) { feedback.textContent = 'Open this page in OpenGod to launch a terminal.'; return; }
   launchTerminal.disabled = true;
   const timeout = window.setTimeout(() => { launchTerminal.disabled = false; feedback.textContent = 'Terminal creation did not respond. Check your tabs before retrying.'; }, 5000);
   window.cefQuery({request: JSON.stringify({version: 1, command: 'createTerminal'}), persistent: false,
@@ -86,7 +126,7 @@ launchTerminal.addEventListener('click', () => {
 const launchOmniroute = document.querySelector<HTMLButtonElement>('#open-omniroute')!;
 launchOmniroute.addEventListener('click', () => {
   const feedback = document.querySelector<HTMLElement>('#terminal-launch-status')!;
-  if (!window.cefQuery) { feedback.textContent = 'Open this page in Aurora to start omniroute.'; return; }
+  if (!window.cefQuery) { feedback.textContent = 'Open this page in OpenGod to start omniroute.'; return; }
   launchOmniroute.disabled = true;
   const timeout = window.setTimeout(() => { launchOmniroute.disabled = false; feedback.textContent = 'Omniroute launch did not respond. Check your tabs before retrying.'; }, 5000);
   window.cefQuery({request: JSON.stringify({version: 1, command: 'launchOmniroute'}), persistent: false,
@@ -111,7 +151,7 @@ const feedback = document.querySelector<HTMLElement>('#terminal-launch-status')!
 
 function loadMacros(): Promise<MacroSnapshot> {
   return new Promise((resolve, reject) => {
-    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    if (!window.cefQuery) { reject(new Error('OpenGod not available')); return; }
     const timeout = window.setTimeout(() => { reject(new Error('Macro state request timed out')); }, 5000);
     window.cefQuery({request: JSON.stringify({version: 1, command: 'macroState'}), persistent: false,
       onSuccess: (raw) => { clearTimeout(timeout); resolve(JSON.parse(raw) as MacroSnapshot); },
@@ -121,7 +161,7 @@ function loadMacros(): Promise<MacroSnapshot> {
 
 function saveMacro(name: string, terminalCommand: string, url: string, macroId?: number): Promise<MacroSnapshot> {
   return new Promise((resolve, reject) => {
-    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    if (!window.cefQuery) { reject(new Error('OpenGod not available')); return; }
     const req: any = {version: 1, command: 'saveMacro', name, terminalCommand, url};
     if (macroId) req.macroId = macroId;
     const timeout = window.setTimeout(() => { reject(new Error('Save macro request timed out')); }, 5000);
@@ -133,7 +173,7 @@ function saveMacro(name: string, terminalCommand: string, url: string, macroId?:
 
 function deleteMacro(macroId: number): Promise<MacroSnapshot> {
   return new Promise((resolve, reject) => {
-    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    if (!window.cefQuery) { reject(new Error('OpenGod not available')); return; }
     const timeout = window.setTimeout(() => { reject(new Error('Delete macro request timed out')); }, 5000);
     window.cefQuery({request: JSON.stringify({version: 1, command: 'deleteMacro', macroId}), persistent: false,
       onSuccess: (raw) => { clearTimeout(timeout); resolve(JSON.parse(raw) as MacroSnapshot); },
@@ -143,7 +183,7 @@ function deleteMacro(macroId: number): Promise<MacroSnapshot> {
 
 function launchMacro(macroId: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (!window.cefQuery) { reject(new Error('Aurora not available')); return; }
+    if (!window.cefQuery) { reject(new Error('OpenGod not available')); return; }
     const timeout = window.setTimeout(() => { reject(new Error('Launch macro request timed out')); }, 5000);
     window.cefQuery({request: JSON.stringify({version: 1, command: 'launchMacro', macroId}), persistent: false,
       onSuccess: () => { clearTimeout(timeout); resolve(); },
@@ -215,4 +255,38 @@ document.addEventListener('click', (e) => {
   if (!contextMenu.contains(e.target as Node) && e.target !== launchRow) contextMenu.hidden = true;
 });
 
-void loadMacros().then(renderMacros).catch(e => { console.error('Failed to load macros:', e); });
+ void loadMacros().then(renderMacros).catch(e => { console.error('Failed to load macros:', e); });
+
+// White screen overlay toggle
+const whiteScreenToggle = document.querySelector<HTMLButtonElement>('#white-screen')!;
+const whiteScreenStatus = document.querySelector<HTMLElement>('#white-screen-status')!;
+const whiteScreenOverlay = document.createElement('div');
+whiteScreenOverlay.className = 'white-screen-overlay';
+whiteScreenOverlay.hidden = true;
+document.body.appendChild(whiteScreenOverlay);
+
+function loadWhiteScreenState(): boolean {
+  const saved = localStorage.getItem('opengod-white-screen');
+  return saved === 'true';
+}
+
+function saveWhiteScreenState(enabled: boolean): void {
+  localStorage.setItem('opengod-white-screen', String(enabled));
+}
+
+function renderWhiteScreenState(enabled: boolean): void {
+  whiteScreenToggle.setAttribute('aria-checked', String(enabled));
+  whiteScreenOverlay.hidden = !enabled;
+  whiteScreenStatus.textContent = enabled ? 'On · overlay active' : 'Off';
+}
+
+function toggleWhiteScreen(): void {
+  const current = whiteScreenToggle.getAttribute('aria-checked') === 'true';
+  const next = !current;
+  saveWhiteScreenState(next);
+  renderWhiteScreenState(next);
+}
+
+// Initialize white screen state
+renderWhiteScreenState(loadWhiteScreenState());
+whiteScreenToggle.addEventListener('click', toggleWhiteScreen);

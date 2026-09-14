@@ -4,9 +4,9 @@
 
 The pinned CEF 152 headers expose `CefBrowserHost::SetAudioMuted` and `CefAudioHandler` PCM capture callbacks, but no per-browser volume setter. The inspected CEF implementation creates its browser loopback with `mute_source = true`; capture replaces normal local playback. The capture implementation is associated with the Alloy browser host, so integration must select the supported Alloy runtime while preserving Chromium sandbox setup.
 
-AURORA implements volume through `src/audio/tab_audio_output.h` and `.cpp`, using Windows XAudio2. This is an OS playback path, not injected page JavaScript or a rewrite of website audio elements. The browser adapter owns one output per tab and forwards planar float packets from CEF. The adapter requests stereo, 48 kHz, 480-frame capture packets; the backend accepts mono/stereo at 8–192 kHz and packets up to 50 ms.
+OPENGOD implements volume through `src/audio/tab_audio_output.h` and `.cpp`, using Windows XAudio2. This is an OS playback path, not injected page JavaScript or a rewrite of website audio elements. The browser adapter owns one output per tab and forwards planar float packets from CEF. The adapter requests stereo, 48 kHz, 480-frame capture packets; the backend accepts mono/stereo at 8–192 kHz and packets up to 50 ms.
 
-The adapter must prevent Chromium's original audio path from bypassing AURORA gain during capture setup or failure. Keep initial capture/mute handling consistent with the inspected CEF runtime; do not assume the public mute setter controls captured PCM. Effective native gain is zero when the tab is muted, otherwise its stored volume divided by 100. Muting must preserve the stored volume. The backend accepts linear gain 0–1 and rejects nonfinite or out-of-range values.
+The adapter must prevent Chromium's original audio path from bypassing OPENGOD gain during capture setup or failure. Keep initial capture/mute handling consistent with the inspected CEF runtime; do not assume the public mute setter controls captured PCM. Effective native gain is zero when the tab is muted, otherwise its stored volume divided by 100. Muting must preserve the stored volume. The backend accepts linear gain 0–1 and rejects nonfinite or out-of-range values.
 
 ## Lifetime, buffering and failures
 
@@ -26,7 +26,7 @@ The current backend uses the default Windows output device and one engine/worker
 
 ## Two-tab output verification (2026-09-11)
 
-The packaged Alloy browser ran two simultaneously playing Web Audio test websites from `tools/audio-fixture.mjs`: A at 440 Hz and B at 660 Hz. `tools/audio-loopback` measured only the Aurora process tree through WASAPI (no microphone or system-wide capture, no saved PCM). Each measurement contains 96,000 frames over two seconds with zero discontinuities and timestamp errors. These are measured browser output streams, not a claim of calibrated physical speaker loudness.
+The packaged Alloy browser ran two simultaneously playing Web Audio test websites from `tools/audio-fixture.mjs`: A at 440 Hz and B at 660 Hz. `tools/audio-loopback` measured only the OpenGod process tree through WASAPI (no microphone or system-wide capture, no saved PCM). Each measurement contains 96,000 frames over two seconds with zero discontinuities and timestamp errors. These are measured browser output streams, not a claim of calibrated physical speaker loudness.
 
 | State | A 440 Hz amplitude | B 660 Hz amplitude |
 |---|---:|---:|
@@ -41,6 +41,6 @@ The packaged Alloy browser ran two simultaneously playing Web Audio test website
 
 This establishes real output changes and isolation, including background A, saved volume while muted, reload restoration and closure without orphan output. The 50% control sets linear native gain 0.5; the capture measurement is not calibrated and must not be described as half perceived loudness. Detailed numeric records are in `audio-verification.json`.
 
-Reproduce: run `node tools/audio-fixture.mjs`; open `http://127.0.0.1:8765/tone-a` and `/tone-b` in separate Aurora tabs and press each Play button. Build `tools/audio-loopback` with CMake, then run its Release executable with `--pid <Aurora root process ID> --seconds 2`. Change only one tab at a time and compare the two frequency amplitudes. The fixture JavaScript generates test content; production volume never injects page scripts.
+Reproduce: run `node tools/audio-fixture.mjs`; open `http://127.0.0.1:8765/tone-a` and `/tone-b` in separate OpenGod tabs and press each Play button. Build `tools/audio-loopback` with CMake, then run its Release executable with `--pid <OpenGod root process ID> --seconds 2`. Change only one tab at a time and compare the two frequency amplitudes. The fixture JavaScript generates test content; production volume never injects page scripts.
 
 The native lifecycle smoke test is now reproducible from `tests/audio`: configure into `build/audio-smoke`, build Release and run CTest. It requires a Windows output device and sends silent PCM only. Core tests cover tab defaults, invalid integers, mute/unmute, navigation, duplicate/reopen and closed IDs; UI protocol tests reject malformed audio snapshots. Full malformed-command runtime injection, forced renderer crash, HTML media/video and audio device-loss recovery remain verification gaps.

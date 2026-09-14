@@ -30,7 +30,7 @@ async function send(command: Command, options: SendOptions = {}): Promise<void> 
     if (response.activeTab !== state.activeTab) addressDirty = false;
     state = response; tabBar.render(state); bookmarkBar.render(state); windowControls.render(state);
     renderAddress(); renderBookmarkButton();
-    if (command === 'createTab' && state.tabs.find(tab => tab.id === state.activeTab)?.url.startsWith('aurora://newtab'))
+    if (command === 'createTab' && state.tabs.find(tab => tab.id === state.activeTab)?.url.startsWith('opengod://newtab'))
       focusAddress();
     status.hidden = true; document.body.classList.remove('disconnected');
   } catch (error) {
@@ -42,7 +42,7 @@ async function send(command: Command, options: SendOptions = {}): Promise<void> 
 function renderAddress(): void {
   if (addressDirty) return;
   const active = state.tabs.find(tab => tab.active);
-  const value = /^aurora:\/\/newtab\/?$/.test(active?.url ?? '') ? '' : (active?.url ?? '');
+  const value = /^opengod:\/\/newtab\/?$/.test(active?.url ?? '') ? '' : (active?.url ?? '');
   // Avoid resetting the caret/selection on every poll when the URL is unchanged.
   if (address.value !== value) address.value = value;
 }
@@ -113,8 +113,8 @@ document.addEventListener('keydown', event => {
 });
 
 // Native host can focus the shell and dispatch this event for shortcuts originating in web content.
-window.addEventListener('aurora-focus-address', focusAddress);
-window.addEventListener('aurora-new-tab-address', event => {
+window.addEventListener('opengod-focus-address', focusAddress);
+window.addEventListener('opengod-new-tab-address', event => {
   const tabId: unknown = (event as CustomEvent<unknown>).detail;
   if (typeof tabId !== 'number') return;
   // Creation is asynchronous: refresh the native snapshot before selecting
@@ -124,7 +124,7 @@ window.addEventListener('aurora-new-tab-address', event => {
     if (state.activeTab === tabId && tab && !tab.terminal) focusAddress();
   });
 });
-window.addEventListener('aurora-open-commands', () => palette.open());
+window.addEventListener('opengod-open-commands', () => palette.open());
 async function poll(): Promise<void> {
   await send('state');
   window.setTimeout(() => void poll(), 500);

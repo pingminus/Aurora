@@ -23,7 +23,7 @@
 #include <unistd.h>
 #endif
 
-namespace aurora::storage {
+namespace opengod::storage {
 namespace {
 constexpr std::size_t kMaxFileSize = 4 * 1024 * 1024;
 constexpr std::size_t kMaxTabs = 256;
@@ -262,4 +262,4 @@ std::optional<std::string> SessionStore::save(const Session& session) const {
   }
   return atomic_write(primary_path, bytes);
 }
-}  // namespace aurora::storage
+}  // namespace opengod::storage

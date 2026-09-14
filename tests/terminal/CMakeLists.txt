@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(AuroraTerminalTests LANGUAGES CXX)
+project(OpenGodTerminalTests LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 add_executable(terminal_tests terminal_test.cpp ../../src/terminal/session.cpp)
 target_include_directories(terminal_tests PRIVATE ../../src)

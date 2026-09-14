@@ -1,7 +1,7 @@
 #include "core/cve_feed.h"
 #include <iostream>
 #include <limits>
-using namespace aurora::cve;
+using namespace opengod::cve;
 int main(){int failures=0;
 #define CHECK(x) do { if(!(x)){std::cerr<<"Failed line "<<__LINE__<<"\n";++failures;} }while(false)
 const auto monday=*parse_time("2026-09-07T00:00:00Z"), sunday=*parse_time("2026-09-13T23:59:59Z");
